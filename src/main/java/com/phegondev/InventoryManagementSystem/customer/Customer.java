@@ -1,0 +1,43 @@
+package com.phegondev.InventoryManagementSystem.customer;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Table(name = "customers")
+public class Customer {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private String phone;
+    private String email;
+    private String address;
+    private Integer loyaltyPoints;
+    private BigDecimal lifetimeSpend;
+    private Integer purchaseCount;
+    private LocalDateTime lastPurchase;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        if (loyaltyPoints == null) loyaltyPoints = 0;
+        if (lifetimeSpend == null) lifetimeSpend = BigDecimal.ZERO;
+        if (purchaseCount == null) purchaseCount = 0;
+    }
+
+    @PreUpdate
+    protected void onUpdate() { updatedAt = LocalDateTime.now(); }
+}
