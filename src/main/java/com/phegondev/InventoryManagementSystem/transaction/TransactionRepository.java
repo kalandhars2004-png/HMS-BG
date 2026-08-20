@@ -17,14 +17,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findAllByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
 
-    //we are searching these field; Transaction's description, note, status, Product's name, sku
+    /**
+     * Searches description, status, and the product's name and sku.
+     *
+     * Two casts are load-bearing on PostgreSQL:
+     *  - CAST(:searchText AS string) — without it, a null argument leaves the bind
+     *    parameter untyped and Postgres infers bytea, so the whole statement fails
+     *    with "function lower(bytea) does not exist". That made the no-search case
+     *    (GET /api/transactions/all) return 500 for every caller.
+     *  - CAST(t.status AS string) — status is @Enumerated(STRING); LOWER() cannot be
+     *    applied to an enum path directly.
+     */
     @Query("SELECT t FROM Transaction t " +
             "LEFT JOIN t.product p " +
-            "WHERE (:searchText IS NULL OR " +
-            "LOWER(t.description) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
-            "LOWER(t.status) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
-            "LOWER(p.name) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
-            "LOWER(p.sku) LIKE LOWER(CONCAT('%', :searchText, '%')))")
+            "WHERE (CAST(:searchText AS string) IS NULL OR CAST(:searchText AS string) = '' OR " +
+            "LOWER(COALESCE(t.description, '')) LIKE LOWER(CONCAT('%', CAST(:searchText AS string), '%')) OR " +
+            "LOWER(CAST(t.status AS string)) LIKE LOWER(CONCAT('%', CAST(:searchText AS string), '%')) OR " +
+            "LOWER(COALESCE(p.name, '')) LIKE LOWER(CONCAT('%', CAST(:searchText AS string), '%')) OR " +
+            "LOWER(COALESCE(p.sku, '')) LIKE LOWER(CONCAT('%', CAST(:searchText AS string), '%')))")
     Page<Transaction> searchTransactions(@Param("searchText") String searchText, Pageable pageable);
 
     @Query("SELECT t FROM Transaction t WHERE t.transactionType = :type AND t.createdAt BETWEEN :start AND :end")

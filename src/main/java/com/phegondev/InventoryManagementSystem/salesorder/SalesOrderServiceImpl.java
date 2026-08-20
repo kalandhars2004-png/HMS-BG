@@ -85,15 +85,27 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         String oldStatus = existing.getStatus();
         existing.setStatus(status);
 
-        if ("DELIVERED".equals(status)) {
+        // A repeated DELIVERED save used to deduct the same stock twice. Only
+        // deduct when the order is actually transitioning INTO delivered.
+        if ("DELIVERED".equals(status) && !"DELIVERED".equals(oldStatus)) {
             List<SalesOrderItem> items = salesOrderItemRepository.findBySalesOrderId(id);
             for (SalesOrderItem item : items) {
                 Product product = productRepository.findById(item.getProductId())
                         .orElseThrow(() -> new NotFoundException("Product Not Found"));
-                product.setStockQuantity(product.getStockQuantity() - item.getQuantity());
-                item.setDeliveredQuantity(item.getQuantity());
-                salesOrderItemRepository.save(item);
-                productRepository.save(product);
+                int qty = item.getQuantity() != null ? item.getQuantity() : 0;
+                int alreadyDelivered = item.getDeliveredQuantity() != null ? item.getDeliveredQuantity() : 0;
+                int remaining = qty - alreadyDelivered;
+                if (remaining > 0) {
+                    if (product.getStockQuantity() < remaining) {
+                        throw new com.phegondev.InventoryManagementSystem.exceptions.InsufficientStockException(
+                                "Insufficient stock for " + product.getName() + ". Available: "
+                                        + product.getStockQuantity() + ", Required: " + remaining);
+                    }
+                    product.setStockQuantity(product.getStockQuantity() - remaining);
+                    item.setDeliveredQuantity(qty);
+                    salesOrderItemRepository.save(item);
+                    productRepository.save(product);
+                }
             }
         }
 
@@ -120,8 +132,23 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     @Override
     @Transactional
     public Response deleteSalesOrder(Long id) {
-        salesOrderRepository.findById(id)
+        SalesOrder salesOrder = salesOrderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Sales Order Not Found"));
+
+        // Deleting a delivered order used to leave stock permanently deducted.
+        // Put the delivered quantity back before removing the record.
+        if ("DELIVERED".equals(salesOrder.getStatus())) {
+            List<SalesOrderItem> items = salesOrderItemRepository.findBySalesOrderId(id);
+            for (SalesOrderItem item : items) {
+                Product product = productRepository.findById(item.getProductId())
+                        .orElseThrow(() -> new NotFoundException("Product Not Found"));
+                int delivered = item.getDeliveredQuantity() != null ? item.getDeliveredQuantity() : 0;
+                if (delivered > 0) {
+                    product.setStockQuantity(product.getStockQuantity() + delivered);
+                    productRepository.save(product);
+                }
+            }
+        }
 
         List<SalesOrderItem> items = salesOrderItemRepository.findBySalesOrderId(id);
         salesOrderItemRepository.deleteAll(items);
@@ -161,7 +188,10 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
     private String generateSONumber() {
         String year = String.valueOf(LocalDateTime.now().getYear());
-        long count = salesOrderRepository.count() + 1;
-        return "SO-" + year + "-" + String.format("%04d", count);
+        // max(id)+1 instead of count()+1: deleting a row no longer reuses an
+        // already-issued number.
+        Long maxId = salesOrderRepository.findMaxId();
+        long next = (maxId != null ? maxId : 0) + 1;
+        return "SO-" + year + "-" + String.format("%04d", next);
     }
 }

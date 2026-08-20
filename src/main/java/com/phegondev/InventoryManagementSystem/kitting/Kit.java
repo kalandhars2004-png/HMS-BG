@@ -36,6 +36,12 @@ public class Kit {
     @Column(name = "quantity_on_hand")
     private Integer quantityOnHand;
 
+    // Optimistic lock: concurrent disassembles used to both succeed, silently
+    // corrupting the on-hand counter.
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     private String status;
 
     @Column(name = "created_at")

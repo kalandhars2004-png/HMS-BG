@@ -25,8 +25,12 @@ public class ReturnServiceImpl implements ReturnService {
     private final ModelMapper modelMapper;
 
     private String generateReturnNumber() {
-        long count = returnRequestRepository.count() + 1;
-        return String.format("RMA-2026-%04d", count);
+        // Year no longer hardcoded to 2026, and max(id)+1 so deleted rows don't
+        // cause number reuse.
+        Long maxId = returnRequestRepository.findMaxId();
+        long next = (maxId != null ? maxId : 0) + 1;
+        String year = String.valueOf(LocalDateTime.now().getYear());
+        return String.format("RMA-%s-%04d", year, next);
     }
 
     private ReturnRequestDTO toDTOWithItems(ReturnRequest returnRequest) {

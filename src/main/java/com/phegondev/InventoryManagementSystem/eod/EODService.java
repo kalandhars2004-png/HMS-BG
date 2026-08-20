@@ -95,17 +95,6 @@ public class EODService {
                 .count();
 
         // ─── Bill Value Stats ───
-        BigDecimal[] totals = todayTransactions.stream()
-                .map(t -> t.getTotalPrice() != null ? t.getTotalPrice() : BigDecimal.ZERO)
-                .mapToDouble(BigDecimal::doubleValue)
-                .collect(() -> new BigDecimal[3],
-                        (a, v) -> {
-                            a[0] = a[0].add(BigDecimal.valueOf(v));
-                            if (a[1] == null || BigDecimal.valueOf(v).compareTo(a[1]) > 0) a[1] = BigDecimal.valueOf(v);
-                            if (a[2] == null || a[2].equals(BigDecimal.ZERO) || BigDecimal.valueOf(v).compareTo(a[2]) < 0) a[2] = BigDecimal.valueOf(v);
-                        },
-                        (a, b) -> {});
-        // Simpler approach
         BigDecimal highestBill = BigDecimal.ZERO;
         BigDecimal lowestBill = BigDecimal.ZERO;
         if (!todayTransactions.isEmpty()) {
@@ -164,6 +153,36 @@ public class EODService {
                         .orElse("N/A"))
                 .orElse("N/A");
 
+        // ─── Cost of Goods / Real Profit / Real GST ───
+        // Previously these were invented constants (25% gross, 18% net, 5% GST of
+        // revenue) persisted as business records. Now they come from actual data:
+        // COGS from purchase price, GST from each product's tax percentage.
+        BigDecimal costOfGoods = BigDecimal.ZERO;
+        BigDecimal totalGst = BigDecimal.ZERO;
+        for (POSTransaction t : todayTransactions) {
+            if (t.getProductId() == null || t.getQuantity() == null) continue;
+            BigDecimal unitPrice = t.getUnitPrice() != null ? t.getUnitPrice() : BigDecimal.ZERO;
+            BigDecimal qty = BigDecimal.valueOf(t.getQuantity());
+            costOfGoods = costOfGoods.add(productRepository.findById(t.getProductId())
+                    .map(p -> p.getPurchasePrice() != null ? p.getPurchasePrice() : unitPrice)
+                    .orElse(unitPrice).multiply(qty));
+            BigDecimal taxPct = productRepository.findById(t.getProductId())
+                    .map(p -> p.getTaxPercentage() != null ? p.getTaxPercentage() : BigDecimal.ZERO)
+                    .orElse(BigDecimal.ZERO);
+            if (taxPct.compareTo(BigDecimal.ZERO) > 0) {
+                totalGst = totalGst.add(unitPrice.multiply(qty)
+                        .multiply(taxPct).divide(taxPct.add(BigDecimal.valueOf(100)), 2, BigDecimal.ROUND_HALF_UP));
+            }
+        }
+        BigDecimal grossProfit = totalSales.subtract(costOfGoods).max(BigDecimal.ZERO);
+        BigDecimal netProfit = grossProfit;
+
+        // Opening stock = yesterday's closing value (real delta), not today's
+        // closing value which makes any open/close difference zero by construction.
+        BigDecimal openingStockValue = summaryRepository.findByReportDate(date.minusDays(1))
+                .map(DailyBusinessSummary::getClosingStockValue)
+                .orElse(closingStockValue);
+
         // ─── Build Report ───
         DailyBusinessSummary report = DailyBusinessSummary.builder()
                 .reportDate(date)
@@ -171,14 +190,14 @@ public class EODService {
                 .totalBills(totalBills)
                 .totalItemsSold(totalItemsSold)
                 .totalRevenue(totalSales)
-                .grossProfit(totalSales.multiply(BigDecimal.valueOf(0.25)).setScale(2, BigDecimal.ROUND_HALF_UP))
-                .netProfit(totalSales.multiply(BigDecimal.valueOf(0.18)).setScale(2, BigDecimal.ROUND_HALF_UP))
+                .grossProfit(grossProfit)
+                .netProfit(netProfit)
                 .cashSales(cashSales)
                 .upiSales(upiSales)
                 .cardSales(cardSales)
                 .walletSales(walletSales)
                 .totalDiscount(BigDecimal.ZERO)
-                .totalGst(totalSales.multiply(BigDecimal.valueOf(0.05)).setScale(2, BigDecimal.ROUND_HALF_UP))
+                .totalGst(totalGst)
                 .totalRefunds(BigDecimal.ZERO)
                 .totalExpenses(BigDecimal.ZERO)
                 .totalPurchases(totalPurchases)
@@ -189,7 +208,7 @@ public class EODService {
                 .highestBill(highestBill)
                 .lowestBill(lowestBill)
                 .loyaltyPointsEarned(0)
-                .openingStockValue(closingStockValue)
+                .openingStockValue(openingStockValue)
                 .closingStockValue(closingStockValue)
                 .lowStockCount((int) lowStockCount)
                 .outOfStockCount((int) outOfStockCount)

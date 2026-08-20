@@ -1,6 +1,7 @@
 package com.phegondev.InventoryManagementSystem.invoice;
 
 import com.phegondev.InventoryManagementSystem.common.Response;
+import com.phegondev.InventoryManagementSystem.exceptions.NameValueRequiredException;
 import com.phegondev.InventoryManagementSystem.exceptions.NotFoundException;
 import com.phegondev.InventoryManagementSystem.salesorder.SalesOrder;
 import com.phegondev.InventoryManagementSystem.salesorder.SalesOrderItem;
@@ -100,6 +101,12 @@ public class InvoiceServiceImpl implements InvoiceService {
         SalesOrder salesOrder = salesOrderRepository.findById(salesOrderId)
                 .orElseThrow(() -> new NotFoundException("Sales Order Not Found"));
 
+        // A sales order must be invoiced once. Repeated calls used to mint a new
+        // invoice for the same revenue every time.
+        if (!invoiceRepository.findBySalesOrderId(salesOrderId).isEmpty()) {
+            throw new NameValueRequiredException("An invoice already exists for this sales order");
+        }
+
         Invoice invoice = Invoice.builder()
                 .invoiceNumber(generateInvoiceNumber())
                 .salesOrderId(salesOrderId)
@@ -167,7 +174,8 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private String generateInvoiceNumber() {
         String year = String.valueOf(LocalDateTime.now().getYear());
-        long count = invoiceRepository.count() + 1;
-        return "INV-" + year + "-" + String.format("%04d", count);
+        Long maxId = invoiceRepository.findMaxId();
+        long next = (maxId != null ? maxId : 0) + 1;
+        return "INV-" + year + "-" + String.format("%04d", next);
     }
 }

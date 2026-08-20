@@ -30,9 +30,10 @@ public class StockCountServiceImpl implements StockCountService {
     private final ModelMapper modelMapper;
 
     private String generateCountNumber() {
-        long count = stockCountRepository.count() + 1;
+        Long maxId = stockCountRepository.findMaxId();
+        long next = (maxId != null ? maxId : 0) + 1;
         String year = String.valueOf(LocalDateTime.now().getYear());
-        return String.format("SC-%s-%04d", year, count);
+        return String.format("SC-%s-%04d", year, next);
     }
 
     @Override
@@ -183,6 +184,16 @@ public class StockCountServiceImpl implements StockCountService {
                 item.setStatus("PENDING");
             } else {
                 item.setStatus(variance != 0 ? "DISCREPANCY" : "COUNTED");
+                // The entire purpose of a physical count: apply the variance to
+                // the real stock. Previously this was computed and then discarded,
+                // so staff counted shelves and the system kept its old numbers.
+                if (variance != 0) {
+                    Product product = productRepository.findById(item.getProductId())
+                            .orElseThrow(() -> new NotFoundException("Product not found for counted item"));
+                    int corrected = (product.getStockQuantity() != null ? product.getStockQuantity() : 0) + variance;
+                    product.setStockQuantity(Math.max(corrected, 0));
+                    productRepository.save(product);
+                }
             }
         }
         stockCountItemRepository.saveAll(items);

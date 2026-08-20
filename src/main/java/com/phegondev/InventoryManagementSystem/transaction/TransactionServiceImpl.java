@@ -26,6 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -45,6 +46,7 @@ public class TransactionServiceImpl implements TransactionService {
 
 
     @Override
+    @Transactional
     public Response restockInventory(TransactionRequest transactionRequest) {
 
         Long productId = transactionRequest.getProductId();
@@ -73,7 +75,10 @@ public class TransactionServiceImpl implements TransactionService {
                 .user(user)
                 .supplier(supplier)
                 .totalProducts(quantity)
-                .totalPrice(product.getPrice().multiply(BigDecimal.valueOf(quantity)))
+                // Valued at purchase price, not the retail `price` — the old code
+                // overstated the cost of every restock by the retail markup.
+                .totalPrice((product.getPurchasePrice() != null ? product.getPurchasePrice() : product.getPrice())
+                        .multiply(BigDecimal.valueOf(quantity)))
                 .description(transactionRequest.getDescription())
                 .build();
 
@@ -89,6 +94,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public Response sell(TransactionRequest transactionRequest) {
 
         Long productId = transactionRequest.getProductId();
@@ -130,6 +136,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public Response returnToSupplier(TransactionRequest transactionRequest) {
 
         Long productId = transactionRequest.getProductId();
@@ -185,8 +192,10 @@ public class TransactionServiceImpl implements TransactionService {
                 .map(transactionPage.getContent(), new TypeToken<List<TransactionDTO>>() {}.getType());
 
         transactionDTOS.forEach(transactionDTOItem -> {
+            // user and supplier are still dropped to keep the payload small, but
+            // `product` is retained: without it a purchase row cannot name the
+            // medicine it moved, so nothing can report purchases per product.
             transactionDTOItem.setUser(null);
-            transactionDTOItem.setProduct(null);
             transactionDTOItem.setSupplier(null);
         });
 
@@ -224,8 +233,10 @@ public class TransactionServiceImpl implements TransactionService {
                 .map(transactions, new TypeToken<List<TransactionDTO>>() {}.getType());
 
         transactionDTOS.forEach(transactionDTOItem -> {
+            // user and supplier are still dropped to keep the payload small, but
+            // `product` is retained: without it a purchase row cannot name the
+            // medicine it moved, so nothing can report purchases per product.
             transactionDTOItem.setUser(null);
-            transactionDTOItem.setProduct(null);
             transactionDTOItem.setSupplier(null);
         });
 
@@ -237,11 +248,52 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
     }
 
-    @Override
+@Override
+    @Transactional
     public Response updateTransactionStatus(Long transactionId, TransactionStatus transactionStatus) {
 
         Transaction existingTransaction = transactionRepository.findById(transactionId)
-                .orElseThrow(()-> new NotFoundException("Transaction Not Found"));
+                .orElseThrow(() -> new NotFoundException("Transaction Not Found"));
+
+        TransactionStatus oldStatus = existingTransaction.getStatus();
+        if (oldStatus == transactionStatus) {
+            return Response.builder()
+                    .status(200)
+                    .message("Transaction already in status " + transactionStatus)
+                    .build();
+        }
+
+        // Cancelling a COMPLETED transaction must reverse its stock effect —
+        // a cancelled sale used to leave stock permanently deducted, and a
+        // cancelled purchase permanently inflated.
+        if (transactionStatus == TransactionStatus.CANCELED && oldStatus == TransactionStatus.COMPLETED) {
+            Product product = existingTransaction.getProduct();
+            if (product != null) {
+                int qty = existingTransaction.getTotalProducts() != null ? existingTransaction.getTotalProducts() : 0;
+                if (existingTransaction.getTransactionType() == TransactionType.PURCHASE) {
+                    product.setStockQuantity(product.getStockQuantity() - qty);
+                } else if (existingTransaction.getTransactionType() == TransactionType.SALE
+                        || existingTransaction.getTransactionType() == TransactionType.RETURN_TO_SUPPLIER) {
+                    product.setStockQuantity(product.getStockQuantity() + qty);
+                }
+                productRepository.save(product);
+            }
+        }
+        // And the mirror case: un-cancelling re-applies the original effect so
+        // stock is not silently left reversed.
+        if (transactionStatus == TransactionStatus.COMPLETED && oldStatus == TransactionStatus.CANCELED) {
+            Product product = existingTransaction.getProduct();
+            if (product != null) {
+                int qty = existingTransaction.getTotalProducts() != null ? existingTransaction.getTotalProducts() : 0;
+                if (existingTransaction.getTransactionType() == TransactionType.PURCHASE) {
+                    product.setStockQuantity(product.getStockQuantity() + qty);
+                } else if (existingTransaction.getTransactionType() == TransactionType.SALE
+                        || existingTransaction.getTransactionType() == TransactionType.RETURN_TO_SUPPLIER) {
+                    product.setStockQuantity(product.getStockQuantity() - qty);
+                }
+                productRepository.save(product);
+            }
+        }
 
         existingTransaction.setStatus(transactionStatus);
         existingTransaction.setUpdatedAt(LocalDateTime.now());

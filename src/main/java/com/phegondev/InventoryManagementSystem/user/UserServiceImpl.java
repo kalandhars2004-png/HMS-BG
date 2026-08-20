@@ -39,14 +39,26 @@ public class UserServiceImpl implements UserService {
     @Override
     public Response registerUser(RegisterRequest registerRequest) {
 
-        // Self-service registration is a PUBLIC endpoint. The requested role is
-        // deliberately ignored here — honouring it previously let any anonymous
-        // caller POST {"role":"ADMIN"} and take over the system. Role changes are
-        // an administrative action: see UserController.updateUser (ADMIN only).
-        UserRole role = UserRole.MANAGER;
-
         if (userRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
             throw new NameValueRequiredException("An account with that email already exists");
+        }
+
+        // Self-service registration is a PUBLIC endpoint. The role from the request
+        // body is deliberately ignored — honouring it previously let any anonymous
+        // caller POST {"role":"ADMIN"} and take over the system.
+        //
+        // The sole exception is bootstrapping: on a completely empty user table the
+        // first account created becomes ADMIN, because otherwise a fresh database
+        // has no way to reach any admin-only endpoint. Once that account exists this
+        // branch can never be taken again, so it is not an escalation path — every
+        // later signup is a MANAGER, and promoting one is an admin-only action via
+        // PUT /api/users/update/{id}.
+        boolean isFirstUser = userRepository.count() == 0;
+        UserRole role = isFirstUser ? UserRole.ADMIN : UserRole.MANAGER;
+
+        if (isFirstUser) {
+            log.info("Bootstrapping first account '{}' as ADMIN (user table was empty)",
+                    registerRequest.getEmail());
         }
 
         User userToSave = User.builder()
