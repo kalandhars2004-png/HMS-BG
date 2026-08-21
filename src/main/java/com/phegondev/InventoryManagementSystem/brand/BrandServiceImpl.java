@@ -14,6 +14,7 @@ import org.modelmapper.TypeToken;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -27,6 +28,7 @@ public class BrandServiceImpl implements BrandService {
     @Override
     public Response createBrand(BrandDTO brandDTO) {
         Brand brandToSave = modelMapper.map(brandDTO, Brand.class);
+        brandToSave.setCreatedAt(LocalDateTime.now());
         brandRepository.save(brandToSave);
 
         return Response.builder()
