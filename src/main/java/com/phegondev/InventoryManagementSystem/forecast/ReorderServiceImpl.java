@@ -59,7 +59,14 @@ public class ReorderServiceImpl implements ReorderService {
     @Override
     public List<ReorderPointDTO> getAllReorderPoints() {
         List<ReorderPoint> points = reorderPointRepository.findAll();
-        Map<Long, Product> productMap = productRepository.findAll()
+
+        // Only the products actually referenced by reorder points are fetched;
+        // previously the entire catalogue was hydrated into a lookup map.
+        Map<Long, Product> productMap = productRepository.findAllById(
+                        points.stream()
+                                .map(ReorderPoint::getProductId)
+                                .filter(Objects::nonNull)
+                                .toList())
                 .stream().collect(Collectors.toMap(Product::getId, p -> p));
 
         return points.stream()

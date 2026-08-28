@@ -1,7 +1,6 @@
 package com.phegondev.InventoryManagementSystem.warehouse;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,11 +13,18 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "warehouses")
+@Table(name = "warehouses", indexes = {
+        @Index(name = "idx_warehouses_branch", columnList = "branch_id"),
+        @Index(name = "idx_warehouses_status", columnList = "status")
+})
 public class Warehouse {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
     private String warehouse;
     @Column(name = "contact_person")
     private String contactPerson;
@@ -36,5 +42,24 @@ public class Warehouse {
     private Integer qty;
     private Boolean status;
     @Column(name = "created_on")
-    private String createdOn;
+    private LocalDateTime createdOn;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (createdOn == null) createdOn = LocalDateTime.now();
+        if (status == null) status = true;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

@@ -21,6 +21,12 @@ public class PurchaseOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
     @Column(name = "po_number")
     private String poNumber;
 

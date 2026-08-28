@@ -26,6 +26,7 @@ import com.phegondev.InventoryManagementSystem.exceptions.NameValueRequiredExcep
 import com.phegondev.InventoryManagementSystem.exceptions.NotFoundException;
 import com.phegondev.InventoryManagementSystem.product.Product;
 import com.phegondev.InventoryManagementSystem.product.ProductRepository;
+import com.phegondev.InventoryManagementSystem.stockmovement.StockMovementService;
 import com.phegondev.InventoryManagementSystem.supplier.Supplier;
 import com.phegondev.InventoryManagementSystem.supplier.SupplierRepository;
 import com.phegondev.InventoryManagementSystem.transaction.Transaction;
@@ -48,6 +49,9 @@ class TransactionServiceImplTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private StockMovementService stockMovementService;
+
     @InjectMocks
     private TransactionServiceImpl transactionService;
 
@@ -63,6 +67,8 @@ class TransactionServiceImplTest {
         product.setId(1L);
         product.setStockQuantity(10);
         product.setPrice(new BigDecimal("10.0"));
+        product.setName("Test Product");
+        product.setSku("SKU001");
 
         supplier = new Supplier();
         supplier.setId(1L);

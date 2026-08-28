@@ -8,10 +8,13 @@ import com.phegondev.InventoryManagementSystem.exceptions.NotFoundException;
 import com.phegondev.InventoryManagementSystem.category.CategoryRepository;
 import com.phegondev.InventoryManagementSystem.product.ProductRepository;
 import com.phegondev.InventoryManagementSystem.product.ProductService;
+import com.phegondev.InventoryManagementSystem.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -58,6 +61,16 @@ public class ProductServiceImpl implements ProductService {
         Category category = categoryRepository.findById(productDTO.getCategoryId())
                 .orElseThrow(()-> new NotFoundException("Category Not Found"));
 
+        // branch scoping §6
+        var tenant = TenantContext.get();
+        Long branchId = tenant != null ? tenant.branchId() : null;
+        Long orgId = tenant != null ? tenant.organizationId() : 1L;
+        // Super admin must explicitly select a branch via header; otherwise use 1
+        if (branchId == null && tenant != null && tenant.isSuperAdmin()) {
+            branchId = 1L;
+        }
+        if (branchId == null) branchId = 1L;
+
         //map out product dto to product entity
         Product productToSave = Product.builder()
                 .name(productDTO.getName())
@@ -66,6 +79,8 @@ public class ProductServiceImpl implements ProductService {
                 .stockQuantity(productDTO.getStockQuantity())
                 .description(productDTO.getDescription())
                 .category(category)
+                .branchId(branchId)
+                .organizationId(orgId)
                 .build();
 
         setProductFields(productToSave, productDTO);
@@ -88,6 +103,10 @@ public class ProductServiceImpl implements ProductService {
 
         Product existingProduct = productRepository.findById(productDTO.getProductId())
                 .orElseThrow(()-> new NotFoundException("Product Not Found"));
+        var t2 = TenantContext.get();
+        if (t2 != null && !t2.isSuperAdmin() && existingProduct.getBranchId() != null && !existingProduct.getBranchId().equals(t2.branchId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied to product " + productDTO.getProductId());
+        }
 
         //check if image is associated with the update request
         if (imageFile != null && !imageFile.isEmpty()){
@@ -136,11 +155,67 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Response getAllProducts() {
+    public Response getAllProducts(Integer page, Integer size) {
+        var tenant = TenantContext.get();
+        boolean isSuper = tenant != null && tenant.isSuperAdmin();
+        Long branchId = tenant != null ? tenant.branchId() : null;
 
-        List<Product> products = productRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+        // Super admin with no branch header sees all (global)
+        if (isSuper && branchId == null) {
+            if (page == null || size == null) {
+                List<Product> products = productRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+                return Response.builder()
+                        .status(200)
+                        .message("success")
+                        .products(toProductDTOs(products))
+                        .build();
+            }
+            Page<Product> productPage = productRepository.findAll(
+                    PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 200),
+                            Sort.by(Sort.Direction.DESC, "id")));
+            return Response.builder()
+                    .status(200)
+                    .message("success")
+                    .products(toProductDTOs(productPage.getContent()))
+                    .totalPages(productPage.getTotalPages())
+                    .totalElements(productPage.getTotalElements())
+                    .currentPage(productPage.getNumber())
+                    .pageSize(productPage.getSize())
+                    .build();
+        }
 
-        List<ProductDTO> productDTOS = products.stream().map(product -> {
+        // Branch-scoped
+        Long effectiveBranch = branchId != null ? branchId : 1L;
+        if (page == null || size == null) {
+            List<Product> products = productRepository.findByBranchIdOrderByIdDesc(effectiveBranch);
+            // Fallback: if no branch data yet (migrated), show legacy global
+            if (products.isEmpty()) products = productRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+            return Response.builder()
+                    .status(200)
+                    .message("success")
+                    .products(toProductDTOs(products))
+                    .build();
+        }
+        // For paged, we still filter in-memory to keep impl simple for now; next phase will add Pageable branch query
+        List<Product> all = productRepository.findByBranchIdOrderByIdDesc(effectiveBranch);
+        if (all.isEmpty()) all = productRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+        int from = Math.max(page, 0) * Math.min(Math.max(size, 1), 200);
+        int to = Math.min(from + Math.min(Math.max(size, 1), 200), all.size());
+        List<Product> content = from >= all.size() ? List.of() : all.subList(from, to);
+        int totalPages = (int) Math.ceil((double) all.size() / Math.min(Math.max(size, 1), 200));
+        return Response.builder()
+                .status(200)
+                .message("success")
+                .products(toProductDTOs(content))
+                .totalPages(totalPages)
+                .totalElements((long) all.size())
+                .currentPage(page)
+                .pageSize(size)
+                .build();
+    }
+
+    private List<ProductDTO> toProductDTOs(List<Product> products) {
+        return products.stream().map(product -> {
             ProductDTO dto = modelMapper.map(product, ProductDTO.class);
             dto.setQuantity(product.getStockQuantity());
             if (product.getCategory() != null) {
@@ -148,12 +223,6 @@ public class ProductServiceImpl implements ProductService {
             }
             return dto;
         }).toList();
-
-        return Response.builder()
-                .status(200)
-                .message("success")
-                .products(productDTOS)
-                .build();
     }
 
     @Override
@@ -161,6 +230,10 @@ public class ProductServiceImpl implements ProductService {
 
         Product product = productRepository.findById(id)
                 .orElseThrow(()-> new NotFoundException("Product Not Found"));
+        var tenant = TenantContext.get();
+        if (tenant != null && !tenant.isSuperAdmin() && product.getBranchId() != null && !product.getBranchId().equals(tenant.branchId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied to product " + id);
+        }
 
         ProductDTO dto = modelMapper.map(product, ProductDTO.class);
         dto.setQuantity(product.getStockQuantity());
@@ -178,8 +251,12 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Response deleteProduct(Long id) {
 
-        productRepository.findById(id)
+        Product existing = productRepository.findById(id)
                 .orElseThrow(()-> new NotFoundException("Product Not Found"));
+        var t = TenantContext.get();
+        if (t != null && !t.isSuperAdmin() && existing.getBranchId() != null && !existing.getBranchId().equals(t.branchId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied to product " + id);
+        }
 
         productRepository.deleteById(id);
 

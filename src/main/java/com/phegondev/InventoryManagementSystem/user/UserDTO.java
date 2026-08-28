@@ -32,6 +32,10 @@ public class UserDTO {
 
     private UserRole role;
 
+    private Long branchId;
+    private String branchName;
+    private Long organizationId;
+
     private List<TransactionDTO> transactions;
 
     private LocalDateTime createdAt;

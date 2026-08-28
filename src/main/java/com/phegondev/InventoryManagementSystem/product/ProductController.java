@@ -125,9 +125,13 @@ public class ProductController {
         return ResponseEntity.ok(productService.updateProduct(productDTO, imageFile));
     }
 
+    // Optional page/size query params: /all stays legacy; /all?page=0&size=50 pages
+    // server-side so large catalogues stop shipping in one response.
     @GetMapping("/all")
-    public ResponseEntity<Response> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
+    public ResponseEntity<Response> getAllProducts(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(productService.getAllProducts(page, size));
     }
     @GetMapping("/{id}")
     public ResponseEntity<Response> getProductById(@PathVariable Long id) {

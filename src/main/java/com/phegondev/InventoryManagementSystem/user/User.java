@@ -43,6 +43,14 @@ public class User {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
+    private String status;
+
     @OneToMany(mappedBy = "user")
     private List<Transaction> transactions;
 

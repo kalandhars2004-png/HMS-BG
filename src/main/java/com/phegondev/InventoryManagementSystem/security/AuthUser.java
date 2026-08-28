@@ -18,7 +18,16 @@ public class AuthUser implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(user.getRole().name()));
+        String role = user.getRole() != null ? user.getRole().name() : "UNKNOWN";
+        var perms = RolePermissionMapping.forRole(user.getRole());
+        var authorities = new java.util.ArrayList<GrantedAuthority>();
+        authorities.add(new SimpleGrantedAuthority(role));
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        for (var p : perms) {
+            authorities.add(new SimpleGrantedAuthority(p.name()));
+            authorities.add(new SimpleGrantedAuthority("PERM_" + p.name()));
+        }
+        return authorities;
     }
 
     @Override

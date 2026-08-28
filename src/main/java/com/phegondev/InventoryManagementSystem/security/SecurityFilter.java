@@ -27,6 +27,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Slf4j
 public class SecurityFilter {
     private final AuthFilter authFilter;
+    private final com.phegondev.InventoryManagementSystem.tenant.TenantFilter tenantFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
@@ -43,6 +44,7 @@ public class SecurityFilter {
                         // Swagger UI can never obtain one interactively.
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/audit/**").authenticated()
+                        .requestMatchers("/api/branches/**").authenticated()
                         // Public catalogue reads. These MUST stay scoped to GET: an
                         // unscoped "/api/products/{id}" also matches POST /api/products/add,
                         // which previously left product creation completely unauthenticated.
@@ -58,7 +60,8 @@ public class SecurityFilter {
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(tenantFilter, AuthFilter.class);
         return httpSecurity.build();
     }
 

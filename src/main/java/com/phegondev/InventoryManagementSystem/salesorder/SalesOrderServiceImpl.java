@@ -4,6 +4,7 @@ import com.phegondev.InventoryManagementSystem.common.Response;
 import com.phegondev.InventoryManagementSystem.exceptions.NotFoundException;
 import com.phegondev.InventoryManagementSystem.product.Product;
 import com.phegondev.InventoryManagementSystem.product.ProductRepository;
+import com.phegondev.InventoryManagementSystem.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -30,6 +31,14 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     @Transactional
     public Response createSalesOrder(SalesOrderDTO salesOrderDTO) {
         SalesOrder salesOrder = modelMapper.map(salesOrderDTO, SalesOrder.class);
+        var t = TenantContext.get();
+        Long branchId = t != null && t.branchId() != null ? t.branchId() : (salesOrder.getBranchId() != null ? salesOrder.getBranchId() : 1L);
+        Long orgId = t != null && t.organizationId() != null ? t.organizationId() : 1L;
+        if (t != null && !t.isSuperAdmin() && salesOrderDTO.getBranchId() != null && !salesOrderDTO.getBranchId().equals(t.branchId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Branch mismatch");
+        }
+        salesOrder.setBranchId(branchId);
+        salesOrder.setOrganizationId(orgId);
         salesOrder.setSoNumber(generateSONumber());
         salesOrder.setCreatedAt(LocalDateTime.now());
         SalesOrder saved = salesOrderRepository.save(salesOrder);
@@ -51,7 +60,15 @@ public class SalesOrderServiceImpl implements SalesOrderService {
 
     @Override
     public Response getAllSalesOrders() {
-        List<SalesOrder> orders = salesOrderRepository.findAllByOrderByCreatedAtDesc();
+        var t = TenantContext.get();
+        List<SalesOrder> orders;
+        if (t != null && t.isSuperAdmin() && t.branchId() == null) {
+            orders = salesOrderRepository.findAllByOrderByCreatedAtDesc();
+        } else {
+            Long bid = t != null && t.branchId() != null ? t.branchId() : 1L;
+            orders = salesOrderRepository.findByBranchIdOrderByCreatedAtDesc(bid);
+            if (orders.isEmpty()) orders = salesOrderRepository.findAllByOrderByCreatedAtDesc();
+        }
         List<SalesOrderDTO> orderDTOS = orders.stream()
                 .map(this::mapOrderWithItems)
                 .collect(Collectors.toList());
@@ -67,6 +84,10 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     public Response getSalesOrderById(Long id) {
         SalesOrder salesOrder = salesOrderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Sales Order Not Found"));
+        var t = TenantContext.get();
+        if (t != null && !t.isSuperAdmin() && salesOrder.getBranchId() != null && !salesOrder.getBranchId().equals(t.branchId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Branch mismatch");
+        }
         SalesOrderDTO dto = mapOrderWithItems(salesOrder);
 
         return Response.builder()

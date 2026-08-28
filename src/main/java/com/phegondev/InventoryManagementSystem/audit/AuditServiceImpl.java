@@ -14,9 +14,12 @@ import java.util.stream.Collectors;
 public class AuditServiceImpl implements AuditService {
 
     private final AuditLogRepository auditLogRepository;
+    private final AuditWriter auditWriter;
 
     @Override
     public void log(String entityType, Long entityId, String action, String description, String changedBy, String oldValue, String newValue) {
+        // Resolve the actor on the CALLER thread — SecurityContext is thread-local
+        // and invisible to the async writer.
         String user = changedBy;
         if (user == null || user.isBlank()) {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -36,7 +39,7 @@ public class AuditServiceImpl implements AuditService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        auditLogRepository.save(auditLog);
+        auditWriter.write(auditLog);
     }
 
     @Override

@@ -22,9 +22,12 @@ public class BatchController {
         return ResponseEntity.ok(batchService.createBatch(batchDTO));
     }
 
+    // Optional page/size params; plain /all keeps the legacy full list.
     @GetMapping("/all")
-    public ResponseEntity<Response> getAllBatches() {
-        return ResponseEntity.ok(batchService.getAllBatches());
+    public ResponseEntity<Response> getAllBatches(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(batchService.getAllBatches(page, size));
     }
 
     @GetMapping("/{id}")

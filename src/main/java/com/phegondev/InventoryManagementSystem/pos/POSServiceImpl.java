@@ -77,6 +77,18 @@ public class POSServiceImpl implements POSService {
         User currentUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("Authenticated user not found"));
         session.setOpenedBy(currentUser.getId());
+        // Branch scoping §17
+        var tenant = com.phegondev.InventoryManagementSystem.tenant.TenantContext.get();
+        if (tenant != null && tenant.branchId() != null) {
+            session.setBranchId(tenant.branchId());
+            session.setOrganizationId(tenant.organizationId());
+        } else if (currentUser.getBranchId() != null) {
+            session.setBranchId(currentUser.getBranchId());
+            session.setOrganizationId(currentUser.getOrganizationId() != null ? currentUser.getOrganizationId() : 1L);
+        } else {
+            session.setBranchId(1L);
+            session.setOrganizationId(1L);
+        }
 
         session.setStatus("OPEN");
         session.setOpenedAt(LocalDateTime.now());
@@ -246,6 +258,13 @@ public class POSServiceImpl implements POSService {
         transaction.setUnitPrice(product.getPrice());
         BigDecimal totalPrice = product.getPrice().multiply(BigDecimal.valueOf(qtyToSell));
         transaction.setTotalPrice(totalPrice);
+        // Branch ownership §6
+        if (session.getBranchId() != null) transaction.setBranchId(session.getBranchId());
+        else {
+            var t = com.phegondev.InventoryManagementSystem.tenant.TenantContext.get();
+            transaction.setBranchId(t != null && t.branchId() != null ? t.branchId() : 1L);
+        }
+        transaction.setOrganizationId(session.getOrganizationId() != null ? session.getOrganizationId() : 1L);
         POSTransaction saved = transactionRepository.save(transaction);
 
         // 7. Update session totals (under lock from step 1)

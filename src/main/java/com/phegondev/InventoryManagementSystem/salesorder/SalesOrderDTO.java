@@ -53,5 +53,8 @@ public class SalesOrderDTO {
 
     private Long createdBy;
 
+    private Long branchId;
+    private Long organizationId;
+
     private List<SalesOrderItemDTO> items;
 }

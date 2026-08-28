@@ -22,6 +22,7 @@ import com.phegondev.InventoryManagementSystem.rma.ReturnRequestDTO;
 import com.phegondev.InventoryManagementSystem.product.ProductDTO;
 import com.phegondev.InventoryManagementSystem.rack.RackDTO;
 import com.phegondev.InventoryManagementSystem.salesorder.SalesOrderDTO;
+import com.phegondev.InventoryManagementSystem.stockmovement.StockMovement;
 import com.phegondev.InventoryManagementSystem.stockadjustment.StockAdjustmentDTO;
 import com.phegondev.InventoryManagementSystem.stockcount.StockCountDTO;
 import com.phegondev.InventoryManagementSystem.stocktransfer.StockTransferDTO;
@@ -31,6 +32,8 @@ import com.phegondev.InventoryManagementSystem.unit.UnitDTO;
 import com.phegondev.InventoryManagementSystem.user.UserDTO;
 import com.phegondev.InventoryManagementSystem.variant.VariantDTO;
 import com.phegondev.InventoryManagementSystem.warehouse.WarehouseDTO;
+import com.phegondev.InventoryManagementSystem.branch.BranchDTO;
+import com.phegondev.InventoryManagementSystem.customer.CustomerDTO;
 import com.phegondev.InventoryManagementSystem.pos.POSSessionDTO;
 import com.phegondev.InventoryManagementSystem.pos.POSTransactionDTO;
 import lombok.Builder;
@@ -88,6 +91,12 @@ public class Response {
     private WarehouseDTO warehouse;
     private List<WarehouseDTO> warehouses;
 
+    private BranchDTO branch;
+    private List<BranchDTO> branches;
+
+    private CustomerDTO customer;
+    private List<CustomerDTO> customers;
+
     private RackDTO rack;
     private List<RackDTO> racks;
 
@@ -142,6 +151,8 @@ public class Response {
 
     private ProductionOrderDTO productionOrder;
     private List<ProductionOrderDTO> productionOrders;
+
+    private List<StockMovement> stockMovements;
 
     // POS daily sales
     private BigDecimal totalSales;

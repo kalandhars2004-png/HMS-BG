@@ -18,9 +18,19 @@ public class StockTransfer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
     private Long productId;
     private Long fromWarehouseId;
     private Long toWarehouseId;
+    @Column(name = "from_branch_id")
+    private Long fromBranchId;
+    @Column(name = "to_branch_id")
+    private Long toBranchId;
     private Integer quantity;
     private String description;
     private String status;

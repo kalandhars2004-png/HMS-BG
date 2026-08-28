@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +39,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "categories", allEntries = true)
     public Response createCategory(CategoryDTO categoryDTO) {
         String trimmedName = categoryDTO.getName().trim();
         if (categoryRepository.existsByName(trimmedName)) {
@@ -66,6 +69,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(cacheNames = "categories", key = "'all'")
     public Response getAllCategories() {
         List<Category> categories = categoryRepository.findAll(Sort.by(Sort.Direction.ASC, "displayOrder"));
         List<CategoryDTO> categoryDTOS = modelMapper.map(categories, new TypeToken<List<CategoryDTO>>() {}.getType());
@@ -81,6 +85,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "categories", allEntries = true)
     public Response updateCategory(Long id, CategoryDTO categoryDTO) {
         Category existing = categoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Category Not Found"));
@@ -114,6 +119,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "categories", allEntries = true)
     public Response deleteCategory(Long id) {
         categoryRepository.findById(id).orElseThrow(() -> new NotFoundException("Category Not Found"));
         categoryRepository.deleteById(id);
@@ -121,6 +127,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "categories", allEntries = true)
     public Response bulkDelete(List<Long> ids) {
         List<Category> toDelete = categoryRepository.findAllById(ids);
         categoryRepository.deleteAll(toDelete);
@@ -128,6 +135,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "categories", allEntries = true)
     public Response bulkStatusUpdate(List<Long> ids, boolean active) {
         List<Category> categories = categoryRepository.findAllById(ids);
         categories.forEach(c -> { c.setStatus(active); c.setUpdatedAt(LocalDateTime.now()); });

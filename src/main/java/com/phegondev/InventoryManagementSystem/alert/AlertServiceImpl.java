@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,48 +27,57 @@ public class AlertServiceImpl implements AlertService {
 
     @Override
     public Response checkAndCreateAlerts() {
-        List<Product> products = productRepository.findAll();
         int created = 0;
 
-        for (Product product : products) {
-            if (product.getStockQuantity() != null && product.getStockQuantity() <= 10) {
-                boolean exists = alertRepository.findByReadFalseOrderByCreatedAtDesc().stream()
-                    .anyMatch(a -> "LOW_STOCK".equals(a.getType()) && a.getRelatedEntityId().equals(product.getId()));
-                if (!exists) {
-                    Alert alert = Alert.builder()
-                        .type("LOW_STOCK")
-                        .severity(product.getStockQuantity() <= 0 ? "CRITICAL" : "WARNING")
-                        .title("Low Stock: " + product.getName())
-                        .message("Product " + product.getName() + " has only " + product.getStockQuantity() + " units left")
-                        .relatedEntityId(product.getId())
-                        .relatedEntityType("PRODUCT")
-                        .read(false)
-                        .createdAt(LocalDateTime.now())
-                        .build();
-                    alertRepository.save(alert);
-                    created++;
-                }
+        // Only products actually at/below the threshold are fetched; previously the
+        // whole catalogue was loaded and filtered in Java.
+        List<Product> lowStockProducts = productRepository.findByStockQuantityLessThanEqual(10);
+
+        // Unread LOW_STOCK ids fetched once. The old dedup streamed the entire
+        // unread-alert list once per product (O(products x alerts) with a query
+        // hidden inside).
+        Set<Long> existingLowStockIds = alertRepository
+                .findByReadFalseOrderByCreatedAtDesc().stream()
+                .filter(a -> "LOW_STOCK".equals(a.getType()))
+                .map(Alert::getRelatedEntityId)
+                .collect(Collectors.toSet());
+
+        for (Product product : lowStockProducts) {
+            if (product.getStockQuantity() == null || existingLowStockIds.contains(product.getId())) {
+                continue;
             }
+            Alert alert = Alert.builder()
+                .type("LOW_STOCK")
+                .severity(product.getStockQuantity() <= 0 ? "CRITICAL" : "WARNING")
+                .title("Low Stock: " + product.getName())
+                .message("Product " + product.getName() + " has only " + product.getStockQuantity() + " units left")
+                .relatedEntityId(product.getId())
+                .relatedEntityType("PRODUCT")
+                .read(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+            alertRepository.save(alert);
+            created++;
         }
 
-        List<Batch> batches = batchRepository.findAll();
-        LocalDateTime thirtyDaysFromNow = LocalDateTime.now().plusDays(30);
+        // Expiring-soon batches come from an indexed range query instead of loading
+        // every batch row ever recorded.
+        List<Batch> expiringBatches = batchRepository.findByExpiryDateBetween(
+                LocalDateTime.now(), LocalDateTime.now().plusDays(30));
 
-        for (Batch batch : batches) {
-            if (batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(thirtyDaysFromNow) && batch.getExpiryDate().isAfter(LocalDateTime.now())) {
-                Alert alert = Alert.builder()
-                    .type("EXPIRING_BATCH")
-                    .severity("WARNING")
-                    .title("Batch Expiring Soon")
-                    .message("Batch " + batch.getBatchNo() + " expires on " + batch.getExpiryDate().toLocalDate())
-                    .relatedEntityId(batch.getId())
-                    .relatedEntityType("BATCH")
-                    .read(false)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-                alertRepository.save(alert);
-                created++;
-            }
+        for (Batch batch : expiringBatches) {
+            Alert alert = Alert.builder()
+                .type("EXPIRING_BATCH")
+                .severity("WARNING")
+                .title("Batch Expiring Soon")
+                .message("Batch " + batch.getBatchNo() + " expires on " + batch.getExpiryDate().toLocalDate())
+                .relatedEntityId(batch.getId())
+                .relatedEntityType("BATCH")
+                .read(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+            alertRepository.save(alert);
+            created++;
         }
 
         return Response.builder()

@@ -11,6 +11,7 @@ import com.phegondev.InventoryManagementSystem.exceptions.NameValueRequiredExcep
 import com.phegondev.InventoryManagementSystem.exceptions.NotFoundException;
 import com.phegondev.InventoryManagementSystem.user.UserRepository;
 import com.phegondev.InventoryManagementSystem.security.JwtUtils;
+import com.phegondev.InventoryManagementSystem.security.UserDetailsCache;
 import com.phegondev.InventoryManagementSystem.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,11 +31,37 @@ import java.util.List;
 @Slf4j
 public class UserServiceImpl implements UserService {
 
+    private static final String INVALID_LOGIN_MESSAGE = "Invalid email or password";
+
+    /** 8-72 chars, at least one letter and one digit. BCrypt ignores input past 72 bytes. */
+    private static final String PASSWORD_PATTERN = "^(?=.*[A-Za-z])(?=.*\\d).{8,72}$";
+    private static final String PASSWORD_MESSAGE =
+            "Password must be at least 8 characters and contain both letters and numbers";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
     private final JwtUtils jwtUtils;
+    private final UserDetailsCache userDetailsCache;
 
+    /**
+     * A valid BCrypt hash of a throwaway value. When the email does not exist we still
+     * run one encoder.matches() round so the response time matches the wrong-password
+     * path; otherwise the fast 404-vs-400 difference alone reveals whether an email
+     * is registered.
+     */
+    private volatile String timingEqualizerHash;
+
+    private String getTimingEqualizerHash() {
+        if (timingEqualizerHash == null) {
+            synchronized (this) {
+                if (timingEqualizerHash == null) {
+                    timingEqualizerHash = passwordEncoder.encode("timing-equalizer");
+                }
+            }
+        }
+        return timingEqualizerHash;
+    }
 
     @Override
     public Response registerUser(RegisterRequest registerRequest) {
@@ -54,10 +81,10 @@ public class UserServiceImpl implements UserService {
         // later signup is a MANAGER, and promoting one is an admin-only action via
         // PUT /api/users/update/{id}.
         boolean isFirstUser = userRepository.count() == 0;
-        UserRole role = isFirstUser ? UserRole.ADMIN : UserRole.MANAGER;
+        UserRole role = isFirstUser ? UserRole.SUPER_ADMIN : UserRole.MANAGER;
 
         if (isFirstUser) {
-            log.info("Bootstrapping first account '{}' as ADMIN (user table was empty)",
+            log.info("Bootstrapping first account '{}' as SUPER_ADMIN (user table was empty)",
                     registerRequest.getEmail());
         }
 
@@ -67,6 +94,9 @@ public class UserServiceImpl implements UserService {
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
                 .phoneNumber(registerRequest.getPhoneNumber())
                 .role(role)
+                .branchId(null) // super admin global; branch assignment via admin
+                .organizationId(1L)
+                .status("ACTIVE")
                 .build();
 
         userRepository.save(userToSave);
@@ -79,13 +109,20 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Response loginUser(LoginRequest loginRequest) {
+        // Same message and same status for unknown email and wrong password — a
+        // distinct "Email not Found" 404 let attackers enumerate registered users.
        User user = userRepository.findByEmail(loginRequest.getEmail())
-               .orElseThrow(()-> new NotFoundException("Email not Found"));
+               .orElse(null);
+
+        if (user == null) {
+            passwordEncoder.matches(loginRequest.getPassword(), getTimingEqualizerHash());
+            throw new InvalidCredentialsException(INVALID_LOGIN_MESSAGE);
+        }
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            throw new InvalidCredentialsException("password does not match");
+            throw new InvalidCredentialsException(INVALID_LOGIN_MESSAGE);
         }
-        String token = jwtUtils.generateToken(user.getEmail());
+        String token = jwtUtils.generateToken(user.getEmail(), user.getBranchId(), user.getRole() != null ? user.getRole().name() : null);
 
         // The client reads `user` off the login response to identify the session.
         // Without it every session silently fell back to id "1".
@@ -162,8 +199,16 @@ public class UserServiceImpl implements UserService {
         dto.setEmail(user.getEmail());
         dto.setPhoneNumber(user.getPhoneNumber());
         dto.setRole(user.getRole());
+        dto.setBranchId(user.getBranchId());
+        dto.setOrganizationId(user.getOrganizationId());
         dto.setTransactions(null);
+        dto.setCreatedAt(user.getCreatedAt());
         return dto;
+    }
+
+    /** True if this user is an ADMIN and no other ADMIN exists. */
+    private boolean isSoleAdmin(User user) {
+        return user.getRole() == UserRole.ADMIN && userRepository.countByRole(UserRole.ADMIN) <= 1;
     }
 
     @Override
@@ -172,16 +217,33 @@ public class UserServiceImpl implements UserService {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(()-> new NotFoundException("User Not Found"));
 
+        // Without this the last ADMIN could demote themselves, leaving a system with
+        // no admin path to promote anyone back.
+        if (userDTO.getRole() != null
+                && userDTO.getRole() != existingUser.getRole()
+                && isSoleAdmin(existingUser)) {
+            throw new NameValueRequiredException("Cannot change the role of the only ADMIN account");
+        }
+
         if (userDTO.getEmail() != null) existingUser.setEmail(userDTO.getEmail());
         if (userDTO.getName() != null) existingUser.setName(userDTO.getName());
         if (userDTO.getPhoneNumber() != null) existingUser.setPhoneNumber(userDTO.getPhoneNumber());
         if (userDTO.getRole() != null) existingUser.setRole(userDTO.getRole());
+        if (userDTO.getBranchId() != null) existingUser.setBranchId(userDTO.getBranchId());
+        if (userDTO.getOrganizationId() != null) existingUser.setOrganizationId(userDTO.getOrganizationId());
 
         if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
+            if (!userDTO.getPassword().matches(PASSWORD_PATTERN)) {
+                throw new NameValueRequiredException(PASSWORD_MESSAGE);
+            }
             existingUser.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         }
 
         userRepository.save(existingUser);
+
+        // Role/password/email changes must reach the auth filter immediately, not
+        // after the 30s UserDetailsCache TTL.
+        userDetailsCache.evict(existingUser.getEmail());
 
         return Response.builder()
                 .status(200)
@@ -192,9 +254,16 @@ public class UserServiceImpl implements UserService {
     @Override
     public Response deleteUser(Long id) {
 
-         userRepository.findById(id)
+         User existingUser = userRepository.findById(id)
                 .orElseThrow(()-> new NotFoundException("User Not Found"));
-         userRepository.deleteById(id);
+
+        // Deleting the only ADMIN would leave no account able to grant the role again.
+        if (isSoleAdmin(existingUser)) {
+            throw new NameValueRequiredException("Cannot delete the only ADMIN account");
+        }
+
+         userRepository.deleteById(existingUser.getId());
+        userDetailsCache.evict(existingUser.getEmail());
 
         return Response.builder()
                 .status(200)

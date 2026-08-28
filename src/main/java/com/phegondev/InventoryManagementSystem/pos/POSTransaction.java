@@ -14,12 +14,22 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "pos_transactions")
+@Table(name = "pos_transactions", indexes = {
+        // EOD pulls completed bills for a date window; sessions list their bills.
+        @Index(name = "idx_pos_tx_status_created", columnList = "status,created_at"),
+        @Index(name = "idx_pos_tx_session_id", columnList = "session_id")
+})
 public class POSTransaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
 
     private Long sessionId;
 

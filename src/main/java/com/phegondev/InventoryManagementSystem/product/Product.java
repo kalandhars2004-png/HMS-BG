@@ -18,7 +18,15 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "products")
+@Table(name = "products", indexes = {
+        // POS barcode lookup, warehouse-scoped listings and category joins.
+        @Index(name = "idx_products_barcode", columnList = "barcode"),
+        @Index(name = "idx_products_warehouse_id", columnList = "warehouse_id"),
+        @Index(name = "idx_products_category_id", columnList = "category_id"),
+        @Index(name = "idx_products_stock_quantity", columnList = "stock_quantity"),
+        @Index(name = "idx_products_branch", columnList = "branch_id"),
+        @Index(name = "idx_products_branch_sku", columnList = "branch_id,sku")
+})
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -64,6 +72,12 @@ public class Product {
     private Long unitId;
     private Long variantId;
     private Long warehouseId;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
 
     @ManyToOne
     @JoinColumn(name = "category_id")

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
@@ -39,6 +40,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     @Query("SELECT t FROM Transaction t WHERE t.transactionType = :type AND t.createdAt BETWEEN :start AND :end")
     List<Transaction> findByTransactionTypeAndCreatedAtBetween(
+            @Param("type") com.phegondev.InventoryManagementSystem.enums.TransactionType type,
+            @Param("start") java.time.LocalDateTime start,
+            @Param("end") java.time.LocalDateTime end);
+
+    /** Sum of total prices for a transaction type in a window — EOD purchases total. */
+    @Query("SELECT COALESCE(SUM(t.totalPrice), 0) FROM Transaction t " +
+            "WHERE t.transactionType = :type AND t.createdAt BETWEEN :start AND :end")
+    BigDecimal sumTotalPriceByTypeAndCreatedAtBetween(
             @Param("type") com.phegondev.InventoryManagementSystem.enums.TransactionType type,
             @Param("start") java.time.LocalDateTime start,
             @Param("end") java.time.LocalDateTime end);

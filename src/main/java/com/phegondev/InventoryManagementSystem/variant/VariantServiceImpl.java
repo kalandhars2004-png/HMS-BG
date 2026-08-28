@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,7 @@ public class VariantServiceImpl implements VariantService {
     private final ModelMapper modelMapper;
 
     @Override
+    @CacheEvict(cacheNames = "variants", allEntries = true)
     public Response createVariant(VariantDTO variantDTO) {
         Variant variantToSave = modelMapper.map(variantDTO, Variant.class);
         variantRepository.save(variantToSave);
@@ -36,6 +39,7 @@ public class VariantServiceImpl implements VariantService {
     }
 
     @Override
+    @Cacheable(cacheNames = "variants", key = "all")
     public Response getAllVariants() {
 
         List<Variant> variants = variantRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -64,6 +68,7 @@ public class VariantServiceImpl implements VariantService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "variants", allEntries = true)
     public Response updateVariant(Long id, VariantDTO variantDTO) {
 
         Variant existingVariant = variantRepository.findById(id)
@@ -82,6 +87,7 @@ public class VariantServiceImpl implements VariantService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "variants", allEntries = true)
     public Response deleteVariant(Long id) {
 
          variantRepository.findById(id)

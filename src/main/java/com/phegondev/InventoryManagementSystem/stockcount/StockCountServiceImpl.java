@@ -55,7 +55,8 @@ public class StockCountServiceImpl implements StockCountService {
         StockCount saved = stockCountRepository.save(stockCount);
 
         if ("DRAFT".equals(saved.getStatus())) {
-            List<Product> products = productRepository.findAll();
+            // Two-column projection instead of hydrating every product entity.
+            List<ProductRepository.ProductStockView> products = productRepository.findAllIdAndStockQuantity();
             List<StockCountItem> items = products.stream()
                     .map(p -> StockCountItem.builder()
                             .stockCountId(saved.getId())

@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,7 @@ public class WarehouseServiceImpl implements WarehouseService {
     private final ModelMapper modelMapper;
 
     @Override
+    @CacheEvict(cacheNames = "warehouses", allEntries = true)
     public Response createWarehouse(WarehouseDTO warehouseDTO) {
         Warehouse warehouseToSave = modelMapper.map(warehouseDTO, Warehouse.class);
         warehouseRepository.save(warehouseToSave);
@@ -36,6 +39,7 @@ public class WarehouseServiceImpl implements WarehouseService {
     }
 
     @Override
+    @Cacheable(cacheNames = "warehouses", key = "all")
     public Response getAllWarehouses() {
 
         List<Warehouse> warehouses = warehouseRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -64,6 +68,7 @@ public class WarehouseServiceImpl implements WarehouseService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "warehouses", allEntries = true)
     public Response updateWarehouse(Long id, WarehouseDTO warehouseDTO) {
 
         Warehouse existingWarehouse = warehouseRepository.findById(id)
@@ -92,6 +97,7 @@ public class WarehouseServiceImpl implements WarehouseService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "warehouses", allEntries = true)
     public Response deleteWarehouse(Long id) {
 
          warehouseRepository.findById(id)

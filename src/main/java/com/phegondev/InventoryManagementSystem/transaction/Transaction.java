@@ -19,12 +19,25 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "transactions")
+@Table(name = "transactions", indexes = {
+        // EOD purchase totals and the month query filter on type + created_at;
+        // joins resolve through the product/user/supplier FK columns.
+        @Index(name = "idx_transactions_type_created", columnList = "transaction_type,created_at"),
+        @Index(name = "idx_transactions_product_id", columnList = "product_id"),
+        @Index(name = "idx_transactions_user_id", columnList = "user_id"),
+        @Index(name = "idx_transactions_supplier_id", columnList = "supplier_id")
+})
 public class Transaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
 
     private Integer totalProducts;
 

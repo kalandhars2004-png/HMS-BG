@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +33,7 @@ public class UnitServiceImpl implements UnitService {
     private final ModelMapper modelMapper;
 
     @Override
+    @CacheEvict(cacheNames = "units", allEntries = true)
     public Response createUnit(UnitDTO unitDTO) {
         Optional<Unit> existing = unitRepository.findByNameIgnoreCase(unitDTO.getName());
         if (existing.isPresent()) {
@@ -74,6 +77,7 @@ public class UnitServiceImpl implements UnitService {
     }
 
     @Override
+    @Cacheable(cacheNames = "units", key = "'all'")
     public Response getAllUnits() {
 
         List<Unit> units = unitRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -127,6 +131,7 @@ public class UnitServiceImpl implements UnitService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "units", allEntries = true)
     public Response updateUnit(Long id, UnitDTO unitDTO) {
 
         Unit existingUnit = unitRepository.findById(id)
@@ -169,6 +174,7 @@ public class UnitServiceImpl implements UnitService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "units", allEntries = true)
     public Response deleteUnit(Long id) {
 
          unitRepository.findById(id)

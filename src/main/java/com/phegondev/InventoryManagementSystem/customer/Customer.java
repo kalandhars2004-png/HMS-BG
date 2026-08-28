@@ -14,11 +14,21 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "customers")
+@Table(name = "customers", indexes = {
+        // Phone is the POS lookup key; created_at powers the daily new-customer count.
+        @Index(name = "idx_customers_phone", columnList = "phone"),
+        @Index(name = "idx_customers_created_at", columnList = "created_at")
+})
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
     private String name;
     private String phone;
     private String email;

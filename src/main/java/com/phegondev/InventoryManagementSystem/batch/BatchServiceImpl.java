@@ -2,10 +2,13 @@ package com.phegondev.InventoryManagementSystem.batch;
 
 import com.phegondev.InventoryManagementSystem.common.Response;
 import com.phegondev.InventoryManagementSystem.exceptions.NotFoundException;
+import com.phegondev.InventoryManagementSystem.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +26,15 @@ public class BatchServiceImpl implements BatchService {
     @Override
     public Response createBatch(BatchDTO batchDTO) {
         Batch batchToSave = modelMapper.map(batchDTO, Batch.class);
+        var t = TenantContext.get();
+        if (t != null) {
+            if (t.branchId() != null) batchToSave.setBranchId(t.branchId());
+            else if (t.isSuperAdmin()) batchToSave.setBranchId(1L);
+            batchToSave.setOrganizationId(t.organizationId() != null ? t.organizationId() : 1L);
+        } else {
+            batchToSave.setBranchId(1L);
+            batchToSave.setOrganizationId(1L);
+        }
         batchRepository.save(batchToSave);
 
         return Response.builder()
@@ -32,15 +44,31 @@ public class BatchServiceImpl implements BatchService {
     }
 
     @Override
-    public Response getAllBatches() {
-        List<Batch> batches = batchRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+    public Response getAllBatches(Integer page, Integer size) {
 
-        List<BatchDTO> batchDTOS = modelMapper.map(batches, new TypeToken<List<BatchDTO>>() {}.getType());
+        if (page == null || size == null) {
+            List<Batch> batches = batchRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+            return Response.builder()
+                    .status(200)
+                    .message("success")
+                    .batches(modelMapper.map(batches, new TypeToken<List<BatchDTO>>() {}.getType()))
+                    .build();
+        }
+
+        // Batch tables grow fastest in pharmacy inventory (one row per delivery
+        // lot), so unbounded listing degrades first here.
+        Page<Batch> batchPage = batchRepository.findAll(
+                PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 200),
+                        Sort.by(Sort.Direction.DESC, "id")));
 
         return Response.builder()
                 .status(200)
                 .message("success")
-                .batches(batchDTOS)
+                .batches(modelMapper.map(batchPage.getContent(), new TypeToken<List<BatchDTO>>() {}.getType()))
+                .totalPages(batchPage.getTotalPages())
+                .totalElements(batchPage.getTotalElements())
+                .currentPage(batchPage.getNumber())
+                .pageSize(batchPage.getSize())
                 .build();
     }
 

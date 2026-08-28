@@ -65,16 +65,33 @@ public class JwtUtils {
     }
 
     public String generateToken(String email){
-        return Jwts.builder()
+        return generateToken(email, null, null);
+    }
+
+    public String generateToken(String email, Long branchId, String role){
+        var builder = Jwts.builder()
                 .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + expirationMillis()))
-                .signWith(key)
-                .compact();
+                .expiration(new Date(System.currentTimeMillis() + expirationMillis()));
+        if (branchId != null) builder.claim("branchId", branchId);
+        if (role != null) builder.claim("role", role);
+        return builder.signWith(key).compact();
     }
 
     public String getUsernameFromToken(String token){
         return extractClaims(token, Claims::getSubject);
+    }
+
+    public Long getBranchIdFromToken(String token){
+        try {
+            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            Object v = claims.get("branchId");
+            if (v instanceof Number n) return n.longValue();
+            if (v instanceof String s) return Long.valueOf(s);
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private <T> T extractClaims(String token, Function<Claims,T> claimsTFunction){

@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +28,7 @@ public class BrandServiceImpl implements BrandService {
     private final ModelMapper modelMapper;
 
     @Override
+    @CacheEvict(cacheNames = "brands", allEntries = true)
     public Response createBrand(BrandDTO brandDTO) {
         Brand brandToSave = modelMapper.map(brandDTO, Brand.class);
         brandToSave.setCreatedAt(LocalDateTime.now());
@@ -38,6 +41,7 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
+    @Cacheable(cacheNames = "brands", key = "all")
     public Response getAllBrands() {
 
         List<Brand> brands = brandRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -66,6 +70,7 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "brands", allEntries = true)
     public Response updateBrand(Long id, BrandDTO brandDTO) {
 
         Brand existingBrand = brandRepository.findById(id)
@@ -84,6 +89,7 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "brands", allEntries = true)
     public Response deleteBrand(Long id) {
 
          brandRepository.findById(id)

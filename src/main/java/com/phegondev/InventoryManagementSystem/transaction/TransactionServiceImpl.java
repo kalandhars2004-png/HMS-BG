@@ -16,6 +16,9 @@ import com.phegondev.InventoryManagementSystem.product.ProductRepository;
 import com.phegondev.InventoryManagementSystem.supplier.SupplierRepository;
 import com.phegondev.InventoryManagementSystem.transaction.TransactionRepository;
 import com.phegondev.InventoryManagementSystem.transaction.TransactionService;
+import com.phegondev.InventoryManagementSystem.stockmovement.StockMovementService;
+import com.phegondev.InventoryManagementSystem.stockmovement.MovementType;
+import com.phegondev.InventoryManagementSystem.tenant.TenantContext;
 import com.phegondev.InventoryManagementSystem.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +45,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final SupplierRepository supplierRepository;
     private final UserService userService;
     private final ProductRepository productRepository;
+    private final StockMovementService stockMovementService;
 
 
 
@@ -62,6 +66,13 @@ public class TransactionServiceImpl implements TransactionService {
                 .orElseThrow(()-> new NotFoundException("Supplier Not Found"));
 
         User user = userService.getCurrentLoggedInUser();
+        var tenant = TenantContext.get();
+        Long branchId = tenant != null && tenant.branchId() != null ? tenant.branchId() : (user.getBranchId() != null ? user.getBranchId() : 1L);
+        Long orgId = tenant != null && tenant.organizationId() != null ? tenant.organizationId() : 1L;
+        // branch cross-check §7
+        if (tenant != null && !tenant.isSuperAdmin() && product.getBranchId() != null && !product.getBranchId().equals(branchId)) {
+            throw new org.springframework.security.access.AccessDeniedException("Product branch mismatch");
+        }
 
         //update the stock quantity and re-save
         product.setStockQuantity(product.getStockQuantity() + quantity);
@@ -71,6 +82,8 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction = Transaction.builder()
                 .transactionType(TransactionType.PURCHASE)
                 .status(TransactionStatus.COMPLETED)
+                .branchId(branchId)
+                .organizationId(orgId)
                 .product(product)
                 .user(user)
                 .supplier(supplier)
@@ -83,6 +96,11 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
         transactionRepository.save(transaction);
+
+        stockMovementService.record(
+                product.getId(), product.getName(), product.getSku(), null,
+                MovementType.PURCHASE, quantity, 0,
+                product.getStockQuantity(), transaction.getId(), "Transaction", user.getName());
 
         return Response.builder()
                 .status(200)
@@ -120,6 +138,8 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction = Transaction.builder()
                 .transactionType(TransactionType.SALE)
                 .status(TransactionStatus.COMPLETED)
+                .branchId(TenantContext.get() != null && TenantContext.get().branchId() != null ? TenantContext.get().branchId() : (user.getBranchId() != null ? user.getBranchId() : 1L))
+                .organizationId(TenantContext.get() != null && TenantContext.get().organizationId() != null ? TenantContext.get().organizationId() : 1L)
                 .product(product)
                 .user(user)
                 .totalProducts(quantity)
@@ -128,6 +148,11 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
         transactionRepository.save(transaction);
+
+        stockMovementService.record(
+                product.getId(), product.getName(), product.getSku(), null,
+                MovementType.SALE, 0, quantity,
+                product.getStockQuantity(), transaction.getId(), "Transaction", user.getName());
 
         return Response.builder()
                 .status(200)
@@ -166,6 +191,8 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction = Transaction.builder()
                 .transactionType(TransactionType.RETURN_TO_SUPPLIER)
                 .status(TransactionStatus.PROCESSING)
+                .branchId(TenantContext.get() != null && TenantContext.get().branchId() != null ? TenantContext.get().branchId() : (user.getBranchId() != null ? user.getBranchId() : 1L))
+                .organizationId(TenantContext.get() != null && TenantContext.get().organizationId() != null ? TenantContext.get().organizationId() : 1L)
                 .product(product)
                 .user(user)
                 .supplier(supplier)
@@ -175,6 +202,11 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
         transactionRepository.save(transaction);
+
+        stockMovementService.record(
+                product.getId(), product.getName(), product.getSku(), null,
+                MovementType.RETURN_TO_SUPPLIER, 0, quantity,
+                product.getStockQuantity(), transaction.getId(), "Transaction", user.getName());
 
         return Response.builder()
                 .status(200)

@@ -15,11 +15,22 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "batches")
+@Table(name = "batches", indexes = {
+        // Expiry range scans (near-expiry/expired counts and alerts) and the
+        // per-product FEFO batch lookup.
+        @Index(name = "idx_batches_expiry_date", columnList = "expiry_date"),
+        @Index(name = "idx_batches_product_id", columnList = "product_id")
+})
 public class Batch {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
     private Long productId;
     @NotBlank
     private String batchNo;

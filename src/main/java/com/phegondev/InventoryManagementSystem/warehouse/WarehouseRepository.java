@@ -15,4 +15,7 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select w from Warehouse w where w.id = :id")
     Optional<Warehouse> findByIdWithLock(@Param("id") Long id);
+
+    java.util.List<Warehouse> findByBranchId(Long branchId);
+    java.util.List<Warehouse> findByBranchIdAndStatus(Long branchId, Boolean status);
 }

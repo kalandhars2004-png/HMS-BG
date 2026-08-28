@@ -7,6 +7,7 @@ import com.phegondev.InventoryManagementSystem.customer.CustomerRepository;
 import com.phegondev.InventoryManagementSystem.inventory.InventoryMovementRepository;
 import com.phegondev.InventoryManagementSystem.pos.POSTransaction;
 import com.phegondev.InventoryManagementSystem.pos.POSTransactionRepository;
+import com.phegondev.InventoryManagementSystem.product.Product;
 import com.phegondev.InventoryManagementSystem.product.ProductRepository;
 import com.phegondev.InventoryManagementSystem.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,8 @@ import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,13 +51,10 @@ public class EODService {
         LocalDateTime dayEnd = date.atTime(LocalTime.MAX);
 
         // ─── Sales Data ───
-        List<POSTransaction> todayTransactions = posTransactionRepository.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .filter(t -> t.getCreatedAt() != null
-                        && !t.getCreatedAt().isBefore(dayStart)
-                        && !t.getCreatedAt().isAfter(dayEnd)
-                        && "COMPLETED".equals(t.getStatus()))
-                .toList();
+        // Date/status filtering happens in SQL now; previously this streamed every
+        // POS transaction ever recorded through a Java filter.
+        List<POSTransaction> todayTransactions = posTransactionRepository
+                .findByStatusAndCreatedAtBetweenOrderByCreatedAtDesc("COMPLETED", dayStart, dayEnd);
 
         BigDecimal totalSales = todayTransactions.stream()
                 .map(t -> t.getTotalPrice() != null ? t.getTotalPrice() : BigDecimal.ZERO)
@@ -88,11 +88,7 @@ public class EODService {
                 .map(POSTransaction::getCustomerName)
                 .distinct()
                 .count();
-        int newCustomersToday = (int) customerRepository.findAll().stream()
-                .filter(c -> c.getCreatedAt() != null
-                        && !c.getCreatedAt().toLocalDate().isBefore(date)
-                        && !c.getCreatedAt().toLocalDate().isAfter(date))
-                .count();
+        int newCustomersToday = (int) customerRepository.countByCreatedAtBetween(dayStart, dayEnd);
 
         // ─── Bill Value Stats ───
         BigDecimal highestBill = BigDecimal.ZERO;
@@ -108,37 +104,21 @@ public class EODService {
         BigDecimal averageBillValue = totalBills > 0 ? totalSales.divide(BigDecimal.valueOf(totalBills), BigDecimal.ROUND_HALF_UP) : BigDecimal.ZERO;
 
         // ─── Inventory ───
-        long lowStockCount = productRepository.findAll().stream()
-                .filter(p -> p.getLowStockQuantity() != null && p.getStockQuantity() <= p.getLowStockQuantity() && p.getStockQuantity() > 0)
-                .count();
-        long outOfStockCount = productRepository.findAll().stream()
-                .filter(p -> p.getStockQuantity() == null || p.getStockQuantity() <= 0)
-                .count();
-        long nearExpiryCount = batchRepository.findAll().stream()
-                .filter(b -> b.getExpiryDate() != null
-                        && b.getExpiryDate().isAfter(LocalDateTime.now())
-                        && b.getExpiryDate().isBefore(LocalDateTime.now().plusDays(90)))
-                .count();
-        long expiredCount = batchRepository.findAll().stream()
-                .filter(b -> b.getExpiryDate() != null && b.getExpiryDate().isBefore(LocalDateTime.now()))
-                .count();
+        // Aggregate SQL counters; the old versions hydrated the whole product and
+        // batch tables (twice each) just to produce four numbers.
+        long lowStockCount = productRepository.countLowStock();
+        long outOfStockCount = productRepository.countOutOfStock();
+        LocalDateTime now = LocalDateTime.now();
+        long nearExpiryCount = batchRepository.countByExpiryDateBetween(now, now.plusDays(90));
+        long expiredCount = batchRepository.countByExpiryDateBefore(now);
 
         // ─── Inventory Value ───
-        BigDecimal closingStockValue = productRepository.findAll().stream()
-                .map(p -> {
-                    BigDecimal price = p.getPurchasePrice() != null ? p.getPurchasePrice() : (p.getPrice() != null ? p.getPrice() : BigDecimal.ZERO);
-                    return price.multiply(BigDecimal.valueOf(p.getStockQuantity() != null ? p.getStockQuantity() : 0));
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal closingStockValue = productRepository.sumStockValue();
 
         // ─── Purchases ───
-        BigDecimal totalPurchases = transactionRepository.findAll().stream()
-                .filter(t -> t.getCreatedAt() != null
-                        && !t.getCreatedAt().isBefore(dayStart)
-                        && !t.getCreatedAt().isAfter(dayEnd)
-                        && "PURCHASE".equals(t.getTransactionType().name()))
-                .map(t -> t.getTotalPrice() != null ? t.getTotalPrice() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalPurchases = transactionRepository.sumTotalPriceByTypeAndCreatedAtBetween(
+                com.phegondev.InventoryManagementSystem.enums.TransactionType.PURCHASE,
+                dayStart, dayEnd);
 
         // ─── Top Medicine ───
         String topMedicine = todayTransactions.stream()
@@ -157,18 +137,30 @@ public class EODService {
         // Previously these were invented constants (25% gross, 18% net, 5% GST of
         // revenue) persisted as business records. Now they come from actual data:
         // COGS from purchase price, GST from each product's tax percentage.
+        //
+        // Products are fetched in one batch query; the loop used to issue two
+        // findById calls per sold line item (2N queries per EOD run).
+        Set<Long> soldProductIds = todayTransactions.stream()
+                .map(POSTransaction::getProductId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, Product> soldProducts = soldProductIds.isEmpty()
+                ? Map.of()
+                : productRepository.findAllById(soldProductIds).stream()
+                        .collect(Collectors.toMap(Product::getId, p -> p));
+
         BigDecimal costOfGoods = BigDecimal.ZERO;
         BigDecimal totalGst = BigDecimal.ZERO;
         for (POSTransaction t : todayTransactions) {
             if (t.getProductId() == null || t.getQuantity() == null) continue;
+            Product product = soldProducts.get(t.getProductId());
             BigDecimal unitPrice = t.getUnitPrice() != null ? t.getUnitPrice() : BigDecimal.ZERO;
             BigDecimal qty = BigDecimal.valueOf(t.getQuantity());
-            costOfGoods = costOfGoods.add(productRepository.findById(t.getProductId())
-                    .map(p -> p.getPurchasePrice() != null ? p.getPurchasePrice() : unitPrice)
-                    .orElse(unitPrice).multiply(qty));
-            BigDecimal taxPct = productRepository.findById(t.getProductId())
-                    .map(p -> p.getTaxPercentage() != null ? p.getTaxPercentage() : BigDecimal.ZERO)
-                    .orElse(BigDecimal.ZERO);
+            costOfGoods = costOfGoods.add(
+                    (product != null && product.getPurchasePrice() != null
+                            ? product.getPurchasePrice() : unitPrice).multiply(qty));
+            BigDecimal taxPct = product != null && product.getTaxPercentage() != null
+                    ? product.getTaxPercentage() : BigDecimal.ZERO;
             if (taxPct.compareTo(BigDecimal.ZERO) > 0) {
                 totalGst = totalGst.add(unitPrice.multiply(qty)
                         .multiply(taxPct).divide(taxPct.add(BigDecimal.valueOf(100)), 2, BigDecimal.ROUND_HALF_UP));

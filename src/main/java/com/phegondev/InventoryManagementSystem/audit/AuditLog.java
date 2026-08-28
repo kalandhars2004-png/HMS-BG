@@ -34,6 +34,12 @@ public class AuditLog {
     @Column(name = "changed_by")
     private String changedBy;
 
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "user_id")
+    private Long userId;
+
     @Column(name = "old_value", columnDefinition = "TEXT")
     private String oldValue;
 

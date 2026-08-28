@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     private final ModelMapper modelMapper;
 
     @Override
+    @CacheEvict(cacheNames = "equipments", allEntries = true)
     public Response createEquipment(EquipmentDTO equipmentDTO) {
         Equipment equipmentToSave = modelMapper.map(equipmentDTO, Equipment.class);
         equipmentRepository.save(equipmentToSave);
@@ -36,6 +39,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Override
+    @Cacheable(cacheNames = "equipments", key = "all")
     public Response getAllEquipments() {
 
         List<Equipment> equipments = equipmentRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -64,6 +68,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "equipments", allEntries = true)
     public Response updateEquipment(Long id, EquipmentDTO equipmentDTO) {
 
         Equipment existingEquipment = equipmentRepository.findById(id)
@@ -87,6 +92,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "equipments", allEntries = true)
     public Response deleteEquipment(Long id) {
 
          equipmentRepository.findById(id)

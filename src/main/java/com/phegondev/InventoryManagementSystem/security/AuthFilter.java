@@ -21,7 +21,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class AuthFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
-    private final CustomUserDetailsService customUserDetailsService;
+    private final UserDetailsCache userDetailsCache;
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -36,7 +36,9 @@ public class AuthFilter extends OncePerRequestFilter {
                 String email = jwtUtils.getUsernameFromToken(token);
 
                 if (StringUtils.hasText(email)) {
-                    UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+                    // Served from a 30s TTL cache; UserServiceImpl evicts on
+                    // role/password/email changes so admin actions apply immediately.
+                    UserDetails userDetails = userDetailsCache.get(email);
 
                     if (jwtUtils.isTokenValid(token, userDetails)) {
                         UsernamePasswordAuthenticationToken authenticationToken =
