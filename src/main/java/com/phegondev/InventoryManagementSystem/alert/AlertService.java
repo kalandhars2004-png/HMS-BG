@@ -13,6 +13,7 @@ public interface AlertService {
     Response markAllAsRead();
     Response getUnreadCount();
     Response getAlertsPaged(int page, int size, String type, Boolean unreadOnly);
+    Response deleteAlert(Long id);
     // Centralized helper for event-driven creation
     com.phegondev.InventoryManagementSystem.alert.Alert createNotification(String type, String severity, String title, String message, Long entityId, String entityType, Long branchId, Long organizationId, String metadata);
     void checkProductStock(Product product);

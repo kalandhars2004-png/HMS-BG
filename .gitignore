@@ -1,1 +1,6 @@
 target/
+.env
+*.bak
+application-*.properties.local
+src/main/resources/application-dev.properties.local
+

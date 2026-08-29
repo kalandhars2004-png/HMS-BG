@@ -67,6 +67,15 @@ public class AuthFilter extends OncePerRequestFilter {
         if (tokenWithBearer != null && tokenWithBearer.startsWith("Bearer ")) {
             return tokenWithBearer.substring(7);
         }
+        // Fallback to httpOnly cookie (set by /api/auth/login). Allows middleware/proxy
+        // to guard routes even if client omits Authorization header.
+        if (request.getCookies() != null) {
+            for (var c : request.getCookies()) {
+                if ("authToken".equals(c.getName()) && c.getValue() != null && !c.getValue().isBlank()) {
+                    return c.getValue();
+                }
+            }
+        }
         return null;
     }
 }

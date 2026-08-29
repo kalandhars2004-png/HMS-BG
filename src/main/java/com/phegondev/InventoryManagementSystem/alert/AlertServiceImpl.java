@@ -256,6 +256,20 @@ public class AlertServiceImpl implements AlertService {
         return Response.builder().status(200).message(String.valueOf(count)).build();
     }
 
+    @Override
+    public Response deleteAlert(Long id) {
+        Alert alert = alertRepository.findById(id).orElse(null);
+        if (alert == null) {
+            return Response.builder().status(404).message("Alert not found").build();
+        }
+        Long branchId = currentBranchId();
+        if (branchId != null && alert.getBranchId() != null && !branchId.equals(alert.getBranchId())) {
+            return Response.builder().status(403).message("Forbidden").build();
+        }
+        alertRepository.delete(alert);
+        return Response.builder().status(200).message("Alert deleted").build();
+    }
+
     private AlertDTO toDTO(Alert a) {
         AlertDTO dto = modelMapper.map(a, AlertDTO.class);
         // Enrich branchName if available

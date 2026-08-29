@@ -14,7 +14,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UnitFilter {
+    @Builder.Default
     private int page = 1;
+    @Builder.Default
     private int limit = 20;
 
     private String search;

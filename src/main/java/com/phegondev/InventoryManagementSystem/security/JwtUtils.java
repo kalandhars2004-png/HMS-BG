@@ -23,17 +23,16 @@ public class JwtUtils {
 
     private SecretKey key;
 
-    @Value("${secreteJwtString}")
+    // Supports both the historical typo `secreteJwtString` and the corrected `secretJwtString` / `jwt.secret`
+    @Value("${secretJwtString:${secreteJwtString:${jwt.secret:}}}")
     private String secreteJwtString ;
 
     /**
-     * Token lifetime in minutes. Defaults to 12 hours — a working shift. The previous
-     * value was a hardcoded ~21 days (the constant read 100L where 1000L was intended,
-     * so it never matched its own "6 months" comment). Long-lived tokens are especially
-     * bad here because there is no refresh and no revocation: a leaked token is valid
-     * until it expires.
+     * Token lifetime in minutes. Defaults to 2 hours — short because there is no refresh
+     * and no revocation: a leaked token is valid until it expires. Prod overrides to 480
+     * via env but 120 is recommended. Previous value 720 (12h) and earlier bug 21 days.
      */
-    @Value("${jwt.expiration-minutes:720}")
+    @Value("${jwt.expiration-minutes:120}")
     private long expirationMinutes;
 
     @PostConstruct

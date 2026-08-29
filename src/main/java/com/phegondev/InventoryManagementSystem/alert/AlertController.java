@@ -47,14 +47,12 @@ public class AlertController {
         return ResponseEntity.ok(alertService.getUnreadCount());
     }
 
-    @PutMapping("/read/{id}")
-    @PatchMapping("/read/{id}")
+    @RequestMapping(value = "/read/{id}", method = {RequestMethod.PUT, RequestMethod.PATCH})
     public ResponseEntity<Response> markAsRead(@PathVariable Long id) {
         return ResponseEntity.ok(alertService.markAsRead(id));
     }
 
-    @PutMapping("/read-all")
-    @PatchMapping("/read-all")
+    @RequestMapping(value = "/read-all", method = {RequestMethod.PUT, RequestMethod.PATCH})
     public ResponseEntity<Response> markAllAsRead() {
         return ResponseEntity.ok(alertService.markAllAsRead());
     }
@@ -67,8 +65,7 @@ public class AlertController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Response> deleteAlert(@PathVariable Long id) {
-        // Soft delete via repository — only owner branch can delete (checked in service if needed)
-        return ResponseEntity.ok(alertService.markAsRead(id));
+        return ResponseEntity.ok(alertService.deleteAlert(id));
     }
 
     @PostMapping("/check")
