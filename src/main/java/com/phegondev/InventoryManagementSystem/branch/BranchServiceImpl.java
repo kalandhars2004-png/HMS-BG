@@ -67,9 +67,20 @@ public class BranchServiceImpl implements BranchService {
             throw new IllegalArgumentException("Branch code already exists: " + dto.getCode());
         }
         Long orgId = dto.getOrganizationId() != null ? dto.getOrganizationId() : DEFAULT_ORG_ID;
-        // ensure organization exists
-        organizationRepository.findById(orgId)
-                .orElseThrow(() -> new NotFoundException("Organization not found: " + orgId));
+        // ensure organization exists — auto-seed Default Organization on H2 dev (Flyway disabled, no V1 seed)
+        if (organizationRepository.findById(orgId).isEmpty()) {
+            if (organizationRepository.count() == 0) {
+                var org = com.phegondev.InventoryManagementSystem.organization.Organization.builder()
+                        .name("Default Organization")
+                        .slug("default-organization")
+                        .build();
+                org = organizationRepository.save(org);
+                orgId = org.getId();
+                log.info("Auto-seeded Default Organization id={}", orgId);
+            } else {
+                throw new NotFoundException("Organization not found: " + orgId);
+            }
+        }
 
         Branch branch = Branch.builder()
                 .organizationId(orgId)
@@ -150,8 +161,12 @@ public class BranchServiceImpl implements BranchService {
     public BranchDTO assignManager(Long branchId, Long managerId) {
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new NotFoundException("Branch not found: " + branchId));
-        userRepository.findById(managerId)
+        var manager = userRepository.findById(managerId)
                 .orElseThrow(() -> new NotFoundException("User not found: " + managerId));
+        // Super admin is global — can never be a branch manager daa
+        if (manager.getRole() == com.phegondev.InventoryManagementSystem.enums.UserRole.SUPER_ADMIN) {
+            throw new com.phegondev.InventoryManagementSystem.exceptions.NameValueRequiredException("SUPER_ADMIN cannot be assigned as branch manager — super admin is single global daa");
+        }
         branch.setManagerId(managerId);
         branch = branchRepository.save(branch);
         auditWriter.write("Branch", String.valueOf(branchId), "ASSIGN_MANAGER", "Assigned manager " + managerId + " to branch " + branch.getCode());

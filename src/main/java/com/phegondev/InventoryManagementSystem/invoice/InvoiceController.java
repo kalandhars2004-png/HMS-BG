@@ -17,13 +17,13 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createInvoice(@RequestBody @Valid InvoiceDTO invoiceDTO) {
         return ResponseEntity.ok(invoiceService.createInvoice(invoiceDTO));
     }
 
     @PostMapping("/from-so/{salesOrderId}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> generateFromSalesOrder(@PathVariable Long salesOrderId) {
         return ResponseEntity.ok(invoiceService.generateFromSalesOrder(salesOrderId));
     }
@@ -39,14 +39,15 @@ public class InvoiceController {
     }
 
     @PutMapping("/status/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateInvoiceStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(invoiceService.updateInvoiceStatus(id, body.get("status")));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteInvoice(@PathVariable Long id) {
         return ResponseEntity.ok(invoiceService.deleteInvoice(id));
     }
 }
+

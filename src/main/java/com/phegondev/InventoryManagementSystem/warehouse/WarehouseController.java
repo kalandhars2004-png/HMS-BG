@@ -18,7 +18,7 @@ public class WarehouseController {
 
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createWarehouse(@RequestBody @Valid WarehouseDTO warehouseDTO) {
         return ResponseEntity.ok(warehouseService.createWarehouse(warehouseDTO));
     }
@@ -32,16 +32,17 @@ public class WarehouseController {
         return ResponseEntity.ok(warehouseService.getWarehouseById(id));
     }
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateWarehouse(@PathVariable Long id, @RequestBody @Valid WarehouseDTO warehouseDTO) {
         return ResponseEntity.ok(warehouseService.updateWarehouse(id, warehouseDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteWarehouse(@PathVariable Long id) {
         return ResponseEntity.ok(warehouseService.deleteWarehouse(id));
     }
 
 
 }
+

@@ -17,7 +17,7 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createCategory(@RequestBody @Valid CategoryDTO categoryDTO) {
         return ResponseEntity.ok(categoryService.createCategory(categoryDTO));
     }
@@ -33,25 +33,25 @@ public class CategoryController {
     }
 
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateCategory(@PathVariable Long id, @RequestBody @Valid CategoryDTO categoryDTO) {
         return ResponseEntity.ok(categoryService.updateCategory(id, categoryDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteCategory(@PathVariable Long id) {
         return ResponseEntity.ok(categoryService.deleteCategory(id));
     }
 
     @PostMapping("/bulk-delete")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> bulkDelete(@RequestBody List<Long> ids) {
         return ResponseEntity.ok(categoryService.bulkDelete(ids));
     }
 
     @PostMapping("/bulk-status")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> bulkStatusUpdate(@RequestBody BulkStatusRequest request) {
         return ResponseEntity.ok(categoryService.bulkStatusUpdate(request.getIds(), request.isActive()));
     }
@@ -61,3 +61,4 @@ public class CategoryController {
         return ResponseEntity.ok(categoryService.searchCategories(query));
     }
 }
+

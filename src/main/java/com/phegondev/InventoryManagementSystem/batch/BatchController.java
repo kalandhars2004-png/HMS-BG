@@ -17,7 +17,7 @@ public class BatchController {
     private final BatchService batchService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createBatch(@RequestBody @Valid BatchDTO batchDTO) {
         return ResponseEntity.ok(batchService.createBatch(batchDTO));
     }
@@ -36,13 +36,13 @@ public class BatchController {
     }
 
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateBatch(@PathVariable Long id, @RequestBody @Valid BatchDTO batchDTO) {
         return ResponseEntity.ok(batchService.updateBatch(id, batchDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteBatch(@PathVariable Long id) {
         return ResponseEntity.ok(batchService.deleteBatch(id));
     }
@@ -52,3 +52,4 @@ public class BatchController {
         return ResponseEntity.ok(batchService.getBatchesExpiringBefore(date));
     }
 }
+

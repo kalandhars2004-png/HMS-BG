@@ -17,7 +17,7 @@ public class StockCountController {
     private final StockCountService stockCountService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createStockCount(@RequestBody @Valid StockCountDTO stockCountDTO) {
         return ResponseEntity.ok(stockCountService.createStockCount(stockCountDTO));
     }
@@ -33,32 +33,33 @@ public class StockCountController {
     }
 
     @PutMapping("/status/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateStockCountStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(stockCountService.updateStockCountStatus(id, body.get("status")));
     }
 
     @PostMapping("/{id}/items")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> addItem(@PathVariable Long id, @RequestBody @Valid StockCountItemDTO itemDTO) {
         return ResponseEntity.ok(stockCountService.addItemToStockCount(id, itemDTO));
     }
 
     @PutMapping("/{id}/items/{itemId}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateItemCount(@PathVariable Long id, @PathVariable Long itemId, @RequestBody Map<String, Integer> body) {
         return ResponseEntity.ok(stockCountService.updateItemCount(id, itemId, body.get("actualQuantity")));
     }
 
     @PostMapping("/{id}/complete")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> completeStockCount(@PathVariable Long id) {
         return ResponseEntity.ok(stockCountService.completeStockCount(id));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteStockCount(@PathVariable Long id) {
         return ResponseEntity.ok(stockCountService.deleteStockCount(id));
     }
 }
+

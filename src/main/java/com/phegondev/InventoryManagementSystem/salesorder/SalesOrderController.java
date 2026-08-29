@@ -17,7 +17,7 @@ public class SalesOrderController {
     private final SalesOrderService salesOrderService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createSalesOrder(@RequestBody @Valid SalesOrderDTO salesOrderDTO) {
         return ResponseEntity.ok(salesOrderService.createSalesOrder(salesOrderDTO));
     }
@@ -33,20 +33,21 @@ public class SalesOrderController {
     }
 
     @PutMapping("/status/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateSalesOrderStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(salesOrderService.updateSalesOrderStatus(id, body.get("status")));
     }
 
     @PutMapping("/payment/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updatePaymentStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(salesOrderService.updatePaymentStatus(id, body.get("paymentStatus")));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteSalesOrder(@PathVariable Long id) {
         return ResponseEntity.ok(salesOrderService.deleteSalesOrder(id));
     }
 }
+

@@ -18,12 +18,14 @@ import com.phegondev.InventoryManagementSystem.transaction.TransactionRepository
 import com.phegondev.InventoryManagementSystem.transaction.TransactionService;
 import com.phegondev.InventoryManagementSystem.stockmovement.StockMovementService;
 import com.phegondev.InventoryManagementSystem.stockmovement.MovementType;
+import com.phegondev.InventoryManagementSystem.alert.AlertService;
 import com.phegondev.InventoryManagementSystem.tenant.TenantContext;
 import com.phegondev.InventoryManagementSystem.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -46,6 +48,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final UserService userService;
     private final ProductRepository productRepository;
     private final StockMovementService stockMovementService;
+    private final @Lazy AlertService alertService;
 
 
 
@@ -102,6 +105,9 @@ public class TransactionServiceImpl implements TransactionService {
                 MovementType.PURCHASE, quantity, 0,
                 product.getStockQuantity(), transaction.getId(), "Transaction", user.getName());
 
+        try { alertService.checkProductStock(product); } catch (Exception e) { log.warn("Alert stock check failed", e); }
+        try { alertService.notifyPurchaseCreated(transaction.getId(), transaction.getTotalPrice(), branchId); } catch (Exception e) { log.warn("Alert purchase notify failed", e); }
+
         return Response.builder()
                 .status(200)
                 .message("Transaction Made Successfully")
@@ -153,6 +159,9 @@ public class TransactionServiceImpl implements TransactionService {
                 product.getId(), product.getName(), product.getSku(), null,
                 MovementType.SALE, 0, quantity,
                 product.getStockQuantity(), transaction.getId(), "Transaction", user.getName());
+
+        try { alertService.checkProductStock(product); } catch (Exception e) { log.warn("Alert stock check failed", e); }
+        try { alertService.notifySaleCreated(transaction.getId(), product.getName(), transaction.getTotalPrice(), transaction.getBranchId()); } catch (Exception e) { log.warn("Alert sale notify failed", e); }
 
         return Response.builder()
                 .status(200)

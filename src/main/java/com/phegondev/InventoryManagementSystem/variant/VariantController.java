@@ -18,7 +18,7 @@ public class VariantController {
 
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createVariant(@RequestBody @Valid VariantDTO variantDTO) {
         return ResponseEntity.ok(variantService.createVariant(variantDTO));
     }
@@ -32,16 +32,17 @@ public class VariantController {
         return ResponseEntity.ok(variantService.getVariantById(id));
     }
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateVariant(@PathVariable Long id, @RequestBody @Valid VariantDTO variantDTO) {
         return ResponseEntity.ok(variantService.updateVariant(id, variantDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteVariant(@PathVariable Long id) {
         return ResponseEntity.ok(variantService.deleteVariant(id));
     }
 
 
 }
+

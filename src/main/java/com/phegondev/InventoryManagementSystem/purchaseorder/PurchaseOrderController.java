@@ -16,7 +16,7 @@ public class PurchaseOrderController {
     private final PurchaseOrderService purchaseOrderService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> addPurchaseOrder(@RequestBody PurchaseOrderDTO purchaseOrderDTO) {
         return ResponseEntity.ok(purchaseOrderService.addPurchaseOrder(purchaseOrderDTO));
     }
@@ -32,20 +32,21 @@ public class PurchaseOrderController {
     }
 
     @PutMapping("/status/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(purchaseOrderService.updateStatus(id, body.get("status")));
     }
 
     @PostMapping("/{id}/receive")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> receiveItems(@PathVariable Long id) {
         return ResponseEntity.ok(purchaseOrderService.receiveItems(id));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deletePurchaseOrder(@PathVariable Long id) {
         return ResponseEntity.ok(purchaseOrderService.deletePurchaseOrder(id));
     }
 }
+

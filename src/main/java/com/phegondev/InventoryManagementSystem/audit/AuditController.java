@@ -45,7 +45,7 @@ public class AuditController {
     @DeleteMapping("/clean")
     // hasRole('ADMIN') expands to the authority ROLE_ADMIN, but AuthUser grants the
     // bare enum name. This was the only hasRole in the codebase and it denied everyone.
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> cleanOldLogs(@RequestParam(defaultValue = "90") int days) {
         auditService.clearOldLogs(days);
         return ResponseEntity.ok(Response.builder()
@@ -54,3 +54,4 @@ public class AuditController {
                 .build());
     }
 }
+

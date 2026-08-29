@@ -16,7 +16,7 @@ public class ReturnController {
     private final ReturnService returnService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createReturn(@RequestBody ReturnRequestDTO returnRequestDTO) {
         return ResponseEntity.ok(returnService.createReturn(returnRequestDTO));
     }
@@ -32,13 +32,13 @@ public class ReturnController {
     }
 
     @PutMapping("/status/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(returnService.updateStatus(id, body.get("status")));
     }
 
     @PutMapping("/{returnId}/items/{itemId}/disposition")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateDisposition(
             @PathVariable Long returnId,
             @PathVariable Long itemId,
@@ -47,8 +47,9 @@ public class ReturnController {
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteReturn(@PathVariable Long id) {
         return ResponseEntity.ok(returnService.deleteReturn(id));
     }
 }
+

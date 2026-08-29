@@ -15,7 +15,7 @@ public class StockAdjustmentController {
     private final StockAdjustmentService stockAdjustmentService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createStockAdjustment(@RequestBody @Valid StockAdjustmentDTO stockAdjustmentDTO) {
         return ResponseEntity.ok(stockAdjustmentService.createStockAdjustment(stockAdjustmentDTO));
     }
@@ -31,14 +31,15 @@ public class StockAdjustmentController {
     }
 
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateStockAdjustment(@PathVariable Long id, @RequestBody @Valid StockAdjustmentDTO stockAdjustmentDTO) {
         return ResponseEntity.ok(stockAdjustmentService.updateStockAdjustment(id, stockAdjustmentDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteStockAdjustment(@PathVariable Long id) {
         return ResponseEntity.ok(stockAdjustmentService.deleteStockAdjustment(id));
     }
 }
+

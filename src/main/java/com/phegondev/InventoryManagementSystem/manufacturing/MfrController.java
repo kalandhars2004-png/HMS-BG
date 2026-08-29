@@ -14,7 +14,7 @@ public class MfrController {
     private final MfrService mfrService;
 
     @PostMapping("/bom/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> addBOM(@RequestBody BillOfMaterialsDTO billOfMaterialsDTO) {
         return ResponseEntity.ok(mfrService.addBOM(billOfMaterialsDTO));
     }
@@ -30,19 +30,19 @@ public class MfrController {
     }
 
     @PutMapping("/bom/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateBOM(@PathVariable Long id, @RequestBody BillOfMaterialsDTO billOfMaterialsDTO) {
         return ResponseEntity.ok(mfrService.updateBOM(id, billOfMaterialsDTO));
     }
 
     @DeleteMapping("/bom/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteBOM(@PathVariable Long id) {
         return ResponseEntity.ok(mfrService.deleteBOM(id));
     }
 
     @PostMapping("/orders/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> addProductionOrder(@RequestBody ProductionOrderDTO productionOrderDTO) {
         return ResponseEntity.ok(mfrService.addProductionOrder(productionOrderDTO));
     }
@@ -58,20 +58,21 @@ public class MfrController {
     }
 
     @PutMapping("/orders/status/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateProductionOrderStatus(@PathVariable Long id, @RequestParam String status) {
         return ResponseEntity.ok(mfrService.updateProductionOrderStatus(id, status));
     }
 
     @PostMapping("/orders/{id}/start")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> startProduction(@PathVariable Long id) {
         return ResponseEntity.ok(mfrService.startProduction(id));
     }
 
     @PostMapping("/orders/{id}/complete")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> completeProduction(@PathVariable Long id) {
         return ResponseEntity.ok(mfrService.completeProduction(id));
     }
 }
+

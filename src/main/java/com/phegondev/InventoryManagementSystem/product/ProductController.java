@@ -23,7 +23,7 @@ public class ProductController {
 
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> saveProduct(
             @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
             @RequestParam("name") String  name,
@@ -73,7 +73,7 @@ public class ProductController {
         return ResponseEntity.ok(productService.saveProduct(productDTO, imageFile));
     }
     @PutMapping("/update")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateProduct(
             @RequestParam(value = "imageFile", required=false) MultipartFile imageFile,
             @RequestParam(value = "name",required = false) String  name,
@@ -140,10 +140,11 @@ public class ProductController {
 
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteProduct(@PathVariable Long id) {
         return ResponseEntity.ok(productService.deleteProduct(id));
     }
 
 
 }
+

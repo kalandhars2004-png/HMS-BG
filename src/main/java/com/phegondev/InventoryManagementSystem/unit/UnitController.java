@@ -22,7 +22,7 @@ public class UnitController {
 
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createUnit(@RequestBody @Valid UnitDTO unitDTO) {
         return ResponseEntity.ok(unitService.createUnit(unitDTO));
     }
@@ -79,16 +79,17 @@ public class UnitController {
         return ResponseEntity.ok(unitService.getUnitById(id));
     }
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateUnit(@PathVariable Long id, @RequestBody @Valid UnitDTO unitDTO) {
         return ResponseEntity.ok(unitService.updateUnit(id, unitDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteUnit(@PathVariable Long id) {
         return ResponseEntity.ok(unitService.deleteUnit(id));
     }
 
 
 }
+

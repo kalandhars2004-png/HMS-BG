@@ -18,7 +18,7 @@ public class BrandController {
 
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createBrand(@RequestBody @Valid BrandDTO brandDTO) {
         return ResponseEntity.ok(brandService.createBrand(brandDTO));
     }
@@ -32,16 +32,17 @@ public class BrandController {
         return ResponseEntity.ok(brandService.getBrandById(id));
     }
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateBrand(@PathVariable Long id, @RequestBody @Valid BrandDTO brandDTO) {
         return ResponseEntity.ok(brandService.updateBrand(id, brandDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteBrand(@PathVariable Long id) {
         return ResponseEntity.ok(brandService.deleteBrand(id));
     }
 
 
 }
+

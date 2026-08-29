@@ -16,6 +16,15 @@ public class AlertDTO {
     private String message;
     private Long relatedEntityId;
     private String relatedEntityType;
+    private Long branchId;
+    private Long organizationId;
+    private Long userId;
+    private String branchName;
     private Boolean read;
+    private LocalDateTime readAt;
+    private Boolean isResolved;
+    private LocalDateTime resolvedAt;
+    private String metadata;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

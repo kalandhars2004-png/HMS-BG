@@ -15,7 +15,7 @@ public class StockTransferController {
     private final StockTransferService stockTransferService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createStockTransfer(@RequestBody @Valid StockTransferDTO stockTransferDTO) {
         return ResponseEntity.ok(stockTransferService.createStockTransfer(stockTransferDTO));
     }
@@ -31,14 +31,15 @@ public class StockTransferController {
     }
 
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateStockTransfer(@PathVariable Long id, @RequestBody @Valid StockTransferDTO stockTransferDTO) {
         return ResponseEntity.ok(stockTransferService.updateStockTransfer(id, stockTransferDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteStockTransfer(@PathVariable Long id) {
         return ResponseEntity.ok(stockTransferService.deleteStockTransfer(id));
     }
 }
+

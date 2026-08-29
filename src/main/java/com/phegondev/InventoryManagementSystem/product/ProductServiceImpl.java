@@ -8,11 +8,13 @@ import com.phegondev.InventoryManagementSystem.exceptions.NotFoundException;
 import com.phegondev.InventoryManagementSystem.category.CategoryRepository;
 import com.phegondev.InventoryManagementSystem.product.ProductRepository;
 import com.phegondev.InventoryManagementSystem.product.ProductService;
+import com.phegondev.InventoryManagementSystem.alert.AlertService;
 import com.phegondev.InventoryManagementSystem.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -32,6 +34,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ModelMapper modelMapper;
     private final CategoryRepository categoryRepository;
+    private final @Lazy AlertService alertService;
 
     private static final String IMAGE_DIRECTORY = System.getProperty("user.dir") + "/product-image/";
 
@@ -92,6 +95,7 @@ public class ProductServiceImpl implements ProductService {
 
         //save the product to our database
         productRepository.save(productToSave);
+        try { alertService.checkProductStock(productToSave); } catch (Exception e) { log.warn("Alert hook failed for new product {}", productToSave.getId(), e); }
         return Response.builder()
                 .status(200)
                 .message("Product successfully saved")
@@ -147,6 +151,7 @@ public class ProductServiceImpl implements ProductService {
 
         //Update the product
         productRepository.save(existingProduct);
+        try { alertService.checkProductStock(existingProduct); } catch (Exception e) { log.warn("Alert hook failed for product {}", existingProduct.getId(), e); }
         return Response.builder()
                 .status(200)
                 .message("Product successfully Updated")

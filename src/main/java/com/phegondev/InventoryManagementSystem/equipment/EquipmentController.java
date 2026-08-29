@@ -18,7 +18,7 @@ public class EquipmentController {
 
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createEquipment(@RequestBody @Valid EquipmentDTO equipmentDTO) {
         return ResponseEntity.ok(equipmentService.createEquipment(equipmentDTO));
     }
@@ -32,16 +32,17 @@ public class EquipmentController {
         return ResponseEntity.ok(equipmentService.getEquipmentById(id));
     }
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateEquipment(@PathVariable Long id, @RequestBody @Valid EquipmentDTO equipmentDTO) {
         return ResponseEntity.ok(equipmentService.updateEquipment(id, equipmentDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteEquipment(@PathVariable Long id) {
         return ResponseEntity.ok(equipmentService.deleteEquipment(id));
     }
 
 
 }
+

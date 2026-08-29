@@ -14,7 +14,7 @@ public class KitController {
     private final KitService kitService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> addKit(@RequestBody KitDTO kitDTO) {
         return ResponseEntity.ok(kitService.addKit(kitDTO));
     }
@@ -30,26 +30,27 @@ public class KitController {
     }
 
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateKit(@PathVariable Long id, @RequestBody KitDTO kitDTO) {
         return ResponseEntity.ok(kitService.updateKit(id, kitDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteKit(@PathVariable Long id) {
         return ResponseEntity.ok(kitService.deleteKit(id));
     }
 
     @PostMapping("/{id}/assemble")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> assembleKit(@PathVariable Long id, @RequestParam Integer quantity) {
         return ResponseEntity.ok(kitService.assembleKit(id, quantity));
     }
 
     @PostMapping("/{id}/disassemble")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> disassembleKit(@PathVariable Long id, @RequestParam Integer quantity) {
         return ResponseEntity.ok(kitService.disassembleKit(id, quantity));
     }
 }
+

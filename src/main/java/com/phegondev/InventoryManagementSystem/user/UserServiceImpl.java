@@ -211,12 +211,27 @@ public class UserServiceImpl implements UserService {
         return user.getRole() == UserRole.ADMIN && userRepository.countByRole(UserRole.ADMIN) <= 1;
     }
 
+    private boolean isSoleSuperAdmin(User user) {
+        return user.getRole() == UserRole.SUPER_ADMIN && userRepository.countByRole(UserRole.SUPER_ADMIN) <= 1;
+    }
+
     @Override
     public Response updateUser(Long id, UserDTO userDTO) {
 
         User existingUser = userRepository.findById(id)
                 .orElseThrow(()-> new NotFoundException("User Not Found"));
 
+        // Nanba: SUPER_ADMIN is only one — never allow a second, and never demote/delete the sole one
+        if (userDTO.getRole() == UserRole.SUPER_ADMIN
+                && existingUser.getRole() != UserRole.SUPER_ADMIN
+                && userRepository.countByRole(UserRole.SUPER_ADMIN) >= 1) {
+            throw new NameValueRequiredException("Only one SUPER_ADMIN allowed — super admin is single daa");
+        }
+        if (userDTO.getRole() != null
+                && userDTO.getRole() != existingUser.getRole()
+                && isSoleSuperAdmin(existingUser)) {
+            throw new NameValueRequiredException("Cannot change the role of the only SUPER_ADMIN account");
+        }
         // Without this the last ADMIN could demote themselves, leaving a system with
         // no admin path to promote anyone back.
         if (userDTO.getRole() != null
@@ -257,6 +272,9 @@ public class UserServiceImpl implements UserService {
          User existingUser = userRepository.findById(id)
                 .orElseThrow(()-> new NotFoundException("User Not Found"));
 
+        if (isSoleSuperAdmin(existingUser)) {
+            throw new NameValueRequiredException("Cannot delete the only SUPER_ADMIN account — super admin is only one daa");
+        }
         // Deleting the only ADMIN would leave no account able to grant the role again.
         if (isSoleAdmin(existingUser)) {
             throw new NameValueRequiredException("Cannot delete the only ADMIN account");

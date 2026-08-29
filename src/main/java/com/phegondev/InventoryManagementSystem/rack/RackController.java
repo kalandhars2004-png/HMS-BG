@@ -15,7 +15,7 @@ public class RackController {
     private final RackService rackService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createRack(@RequestBody @Valid RackDTO rackDTO) {
         return ResponseEntity.ok(rackService.createRack(rackDTO));
     }
@@ -31,14 +31,15 @@ public class RackController {
     }
 
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateRack(@PathVariable Long id, @RequestBody @Valid RackDTO rackDTO) {
         return ResponseEntity.ok(rackService.updateRack(id, rackDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteRack(@PathVariable Long id) {
         return ResponseEntity.ok(rackService.deleteRack(id));
     }
 }
+

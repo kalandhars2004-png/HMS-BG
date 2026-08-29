@@ -15,7 +15,7 @@ public class PurchaseReturnController {
     private final PurchaseReturnService purchaseReturnService;
 
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> createPurchaseReturn(@RequestBody @Valid PurchaseReturnDTO purchaseReturnDTO) {
         return ResponseEntity.ok(purchaseReturnService.createPurchaseReturn(purchaseReturnDTO));
     }
@@ -31,14 +31,15 @@ public class PurchaseReturnController {
     }
 
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updatePurchaseReturn(@PathVariable Long id, @RequestBody @Valid PurchaseReturnDTO purchaseReturnDTO) {
         return ResponseEntity.ok(purchaseReturnService.updatePurchaseReturn(id, purchaseReturnDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deletePurchaseReturn(@PathVariable Long id) {
         return ResponseEntity.ok(purchaseReturnService.deletePurchaseReturn(id));
     }
 }
+

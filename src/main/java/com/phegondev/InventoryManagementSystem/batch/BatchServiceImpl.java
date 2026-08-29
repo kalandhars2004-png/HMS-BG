@@ -2,11 +2,13 @@ package com.phegondev.InventoryManagementSystem.batch;
 
 import com.phegondev.InventoryManagementSystem.common.Response;
 import com.phegondev.InventoryManagementSystem.exceptions.NotFoundException;
+import com.phegondev.InventoryManagementSystem.alert.AlertService;
 import com.phegondev.InventoryManagementSystem.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,6 +24,7 @@ public class BatchServiceImpl implements BatchService {
 
     private final BatchRepository batchRepository;
     private final ModelMapper modelMapper;
+    private final @Lazy AlertService alertService;
 
     @Override
     public Response createBatch(BatchDTO batchDTO) {
@@ -36,6 +39,7 @@ public class BatchServiceImpl implements BatchService {
             batchToSave.setOrganizationId(1L);
         }
         batchRepository.save(batchToSave);
+        try { alertService.checkBatchExpiry(batchToSave); } catch (Exception e) { log.warn("Alert hook failed for batch {}", batchToSave.getId(), e); }
 
         return Response.builder()
                 .status(200)
@@ -99,6 +103,7 @@ public class BatchServiceImpl implements BatchService {
         if (batchDTO.getExpiryDate() != null) existingBatch.setExpiryDate(batchDTO.getExpiryDate());
         if (batchDTO.getStatus() != null) existingBatch.setStatus(batchDTO.getStatus());
         batchRepository.save(existingBatch);
+        try { alertService.checkBatchExpiry(existingBatch); } catch (Exception e) { log.warn("Alert hook failed for batch {}", existingBatch.getId(), e); }
 
         return Response.builder()
                 .status(200)

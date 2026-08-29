@@ -17,7 +17,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/all")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> getAllUsers(){
         return ResponseEntity.ok(userService.getAllUsers());
     }
@@ -26,20 +26,20 @@ public class UserController {
     // unguarded version let any authenticated user promote themselves to ADMIN or
     // take over another account outright.
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> updateUser(@PathVariable Long id,  @RequestBody UserDTO userDTO){
         return ResponseEntity.ok(userService.updateUser(id, userDTO));
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> deleteUser(@PathVariable Long id){
         return ResponseEntity.ok(userService.deleteUser(id));
     }
 
 
     @GetMapping("/transactions/{userId}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Response> getUserAndTransactions(@PathVariable Long userId){
         return ResponseEntity.ok(userService.getUserTransactions(userId));
     }

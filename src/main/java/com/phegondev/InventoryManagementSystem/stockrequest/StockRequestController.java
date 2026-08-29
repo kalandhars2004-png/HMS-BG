@@ -29,7 +29,7 @@ public class StockRequestController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN') || hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') || hasAnyAuthority('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<List<StockRequestDTO>> all() {
         return ResponseEntity.ok(service.getAll());
     }
@@ -68,3 +68,4 @@ public class StockRequestController {
         return ResponseEntity.ok(service.cancel(id));
     }
 }
+
