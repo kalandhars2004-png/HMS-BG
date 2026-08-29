@@ -24,10 +24,11 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
+                // TESTING ONLY — allow all origins daa. Narrow to explicit Vercel URLs in prod later.
                 registry.addMapping("/**")
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
-                        .allowedOriginPatterns(allowedOrigins)
+                        .allowedOriginPatterns("*")
                         .allowCredentials(true);
             }
         };
