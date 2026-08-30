@@ -25,6 +25,15 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
            "ORDER BY sm.createdAt DESC")
     Page<StockMovement> searchMovements(@Param("searchText") String searchText, Pageable pageable);
 
+    @Query("SELECT sm FROM StockMovement sm WHERE sm.branchId = :branchId AND " +
+           "(:searchText IS NULL OR :searchText = '' OR " +
+           "LOWER(sm.productName) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
+           "LOWER(sm.productSku) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
+           "LOWER(sm.batchNo) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
+           "LOWER(sm.changedBy) LIKE LOWER(CONCAT('%', :searchText, '%'))) " +
+           "ORDER BY sm.createdAt DESC")
+    Page<StockMovement> searchMovementsByBranch(@Param("branchId") Long branchId, @Param("searchText") String searchText, Pageable pageable);
+
     @Query("SELECT sm FROM StockMovement sm WHERE " +
            "(:searchText IS NULL OR :searchText = '' OR " +
            "LOWER(sm.productName) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +

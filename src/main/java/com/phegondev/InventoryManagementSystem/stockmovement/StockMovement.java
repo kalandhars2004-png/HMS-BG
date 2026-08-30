@@ -13,8 +13,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Table(name = "stock_movements", indexes = {
+    @Table(name = "stock_movements", indexes = {
     @Index(name = "idx_sm_product_id", columnList = "product_id"),
+    @Index(name = "idx_sm_branch_id", columnList = "branch_id"),
     @Index(name = "idx_sm_movement_type", columnList = "movement_type"),
     @Index(name = "idx_sm_created_at", columnList = "created_at")
 })
