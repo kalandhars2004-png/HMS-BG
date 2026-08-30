@@ -15,4 +15,5 @@ public interface UserService {
     Response updateUser(Long id, UserDTO userDTO);
     Response deleteUser(Long id);
     Response getUserTransactions(Long id);
+    Response getBillers();
 }

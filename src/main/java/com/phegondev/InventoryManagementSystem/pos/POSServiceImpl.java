@@ -256,6 +256,20 @@ public class POSServiceImpl implements POSService {
         transaction.setReceiptNumber(generateReceiptNumber());
         transaction.setStatus("COMPLETED");
         transaction.setUnitPrice(product.getPrice());
+        // Biller: whoever the POS popup selected, otherwise the logged-in user
+        if (transactionDTO.getBillerId() != null) {
+            userRepository.findById(transactionDTO.getBillerId())
+                    .ifPresent(b -> {
+                        transaction.setBillerId(b.getId());
+                        transaction.setBillerName(b.getName());
+                    });
+        }
+        if (transaction.getBillerId() == null) {
+            userRepository.findByEmail(performedBy).ifPresent(b -> {
+                transaction.setBillerId(b.getId());
+                transaction.setBillerName(b.getName());
+            });
+        }
         BigDecimal totalPrice = product.getPrice().multiply(BigDecimal.valueOf(qtyToSell));
         transaction.setTotalPrice(totalPrice);
         // Branch ownership §6
@@ -579,6 +593,10 @@ public class POSServiceImpl implements POSService {
         if (transaction.getProductId() != null) {
             productRepository.findById(transaction.getProductId())
                     .ifPresent(p -> dto.setProductName(p.getName()));
+        }
+        if (dto.getBillerName() == null && transaction.getBillerId() != null) {
+            userRepository.findById(transaction.getBillerId())
+                    .ifPresent(b -> dto.setBillerName(b.getName()));
         }
         return dto;
     }

@@ -311,5 +311,31 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
+    /**
+     * Staff eligible to bill at the POS ("Who is Billing?" popup). Scoped to the
+     * request's branch context; a super-admin session (no branch) sees everyone
+     * except SUPER_ADMIN. SUPER_ADMIN is a single global account and is excluded
+     * so billing always points at a real branch user.
+     */
+    @Override
+    public Response getBillers() {
+        Long branchId = com.phegondev.InventoryManagementSystem.tenant.TenantContext.getBranchIdOrNull();
+
+        List<User> candidates = branchId != null
+                ? userRepository.findByBranchIdOrderByNameAsc(branchId)
+                : userRepository.findAll(Sort.by(Sort.Direction.ASC, "name"));
+
+        List<UserDTO> billers = candidates.stream()
+                .filter(u -> u.getRole() != UserRole.SUPER_ADMIN)
+                .filter(u -> !"INACTIVE".equalsIgnoreCase(u.getStatus()))
+                .map(this::toSummaryDTO)
+                .toList();
+
+        return Response.builder()
+                .status(200)
+                .message("success")
+                .users(billers)
+                .build();
+    }
 
 }

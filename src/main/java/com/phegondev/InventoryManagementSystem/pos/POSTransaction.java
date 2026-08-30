@@ -51,6 +51,12 @@ public class POSTransaction {
 
     private String customerName;
 
+    @Column(name = "biller_id")
+    private Long billerId;
+
+    @Column(name = "biller_name")
+    private String billerName;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

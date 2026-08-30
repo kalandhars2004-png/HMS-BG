@@ -31,5 +31,7 @@ public class POSTransactionDTO {
     private String customerPhone;
     private BigDecimal discountAmount;
     private BigDecimal taxAmount;
+    private Long billerId;
+    private String billerName;
     private LocalDateTime createdAt;
 }

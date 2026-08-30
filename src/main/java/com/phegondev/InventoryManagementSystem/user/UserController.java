@@ -51,4 +51,11 @@ public class UserController {
     public ResponseEntity<Response> getCurrentUser(){
         return ResponseEntity.ok(userService.getCurrentUserProfile());
     }
+
+    // Staff who can bill at the POS, scoped to the current branch. Open to any
+    // authenticated user (the cashier needs it before picking "Who is Billing").
+    @GetMapping("/billers")
+    public ResponseEntity<Response> getBillers(){
+        return ResponseEntity.ok(userService.getBillers());
+    }
 }
