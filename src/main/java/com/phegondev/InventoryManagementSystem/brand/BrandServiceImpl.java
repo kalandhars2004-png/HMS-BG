@@ -41,7 +41,7 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
-    @Cacheable(cacheNames = "brands", key = "all")
+    @Cacheable(cacheNames = "brands", key = "'all'")
     public Response getAllBrands() {
 
         List<Brand> brands = brandRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -103,3 +103,4 @@ public class BrandServiceImpl implements BrandService {
                 .build();
     }
 }
+

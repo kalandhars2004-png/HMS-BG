@@ -39,7 +39,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Override
-    @Cacheable(cacheNames = "equipments", key = "all")
+    @Cacheable(cacheNames = "equipments", key = "'all'")
     public Response getAllEquipments() {
 
         List<Equipment> equipments = equipmentRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -106,3 +106,4 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .build();
     }
 }
+

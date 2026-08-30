@@ -18,11 +18,16 @@ public class StockTransferDTO {
     private Long productId;
     private Long fromWarehouseId;
     private Long toWarehouseId;
+    // Branch transfer — used by /stock/transfer UI
+    private Long fromBranchId;
+    private Long toBranchId;
     private Integer quantity;
     private String description;
     private String status;
     private String fromWarehouseName;
     private String toWarehouseName;
+    private String fromBranchName;
+    private String toBranchName;
     private String productName;
     private LocalDateTime createdAt;
 }

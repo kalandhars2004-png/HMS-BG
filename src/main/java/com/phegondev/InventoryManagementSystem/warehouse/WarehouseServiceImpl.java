@@ -39,7 +39,7 @@ public class WarehouseServiceImpl implements WarehouseService {
     }
 
     @Override
-    @Cacheable(cacheNames = "warehouses", key = "all")
+    @Cacheable(cacheNames = "warehouses", key = "'all'")
     public Response getAllWarehouses() {
 
         List<Warehouse> warehouses = warehouseRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -111,3 +111,4 @@ public class WarehouseServiceImpl implements WarehouseService {
                 .build();
     }
 }
+

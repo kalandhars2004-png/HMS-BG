@@ -39,7 +39,7 @@ public class VariantServiceImpl implements VariantService {
     }
 
     @Override
-    @Cacheable(cacheNames = "variants", key = "all")
+    @Cacheable(cacheNames = "variants", key = "'all'")
     public Response getAllVariants() {
 
         List<Variant> variants = variantRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
@@ -101,3 +101,4 @@ public class VariantServiceImpl implements VariantService {
                 .build();
     }
 }
+
