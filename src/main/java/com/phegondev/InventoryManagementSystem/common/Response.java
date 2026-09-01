@@ -36,6 +36,7 @@ import com.phegondev.InventoryManagementSystem.branch.BranchDTO;
 import com.phegondev.InventoryManagementSystem.customer.CustomerDTO;
 import com.phegondev.InventoryManagementSystem.pos.POSSessionDTO;
 import com.phegondev.InventoryManagementSystem.pos.POSTransactionDTO;
+import com.phegondev.InventoryManagementSystem.backup.BackupDTO;
 import lombok.Builder;
 import lombok.Data;
 
@@ -158,6 +159,11 @@ public class Response {
     private BigDecimal totalSales;
     private BigDecimal totalRefunds;
     private Long transactionCount;
+
+    // Backup / cloud
+    private BackupDTO backup;
+    private List<BackupDTO> backups;
+    private Boolean cloudConfigured;
 
     private final LocalDateTime timestamp = LocalDateTime.now();
 
