@@ -196,6 +196,17 @@ public class BackupServiceImpl implements BackupService {
         backupRepository.save(b);
     }
 
+    private Map<String, Object> elementToMap(jakarta.persistence.Tuple tuple) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (jakarta.persistence.TupleElement<?> el : tuple.getElements()) {
+            String alias = el.getAlias();
+            if (alias == null || alias.isBlank()) continue;
+            Object v = tuple.get(alias);
+            map.put(alias, v);
+        }
+        return map;
+    }
+
     // ─── Google Drive (java.net.http only, no extra deps) ───
 
     private PrivateKey parsePrivateKey(String pkcs8) throws Exception {
